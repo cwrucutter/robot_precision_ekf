@@ -1,7 +1,7 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
 * 
-*  Copyright (c) 2008, Willow Garage, Inc.
+*  Copyright (c) 2013, EJ Kreinar, Case Western Reserve University
 *  All rights reserved.
 * 
 *  Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,6 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 
-/* Author: Wim Meeussen */
 
 #include <robot_precision_ekf/robot_precision_ekf.h>
 
@@ -42,321 +41,123 @@ using namespace tf;
 using namespace std;
 using namespace ros;
 
-
-namespace estimation
+// constructor
+RobotPrecisionEKF::RobotPrecisionEKF(double timestep):
+  prior_(NULL),
+  filter_(NULL),
+  filter_initialized_(false),
+  gps_initialized_(false),
+  odom_initialized_(false),
+  imu_initialized_(false),
+  dt_(timestep)
 {
-  // constructor
-  RobotPrecisionEKF::RobotPrecisionEKF():
-    prior_(NULL),
-    filter_(NULL),
-    filter_initialized_(false),
-    gps_initialized_(false),
-    odom_initialized_(false),
-    imu_initialized_(false)
-  {
-    // create SYSTEM MODEL
-    ColumnVector sysNoise_Mu(5);  sysNoise_Mu = 0;
-    SymmetricMatrix sysNoise_Cov(5); sysNoise_Cov = 0;
-    for (unsigned int i=1; i<=5; i++) sysNoise_Cov(i,i) = pow(1000.0,2);
-    Gaussian system_Uncertainty(sysNoise_Mu, sysNoise_Cov);
-    sys_pdf_   = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty);
-    sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
-/*
-    // create MEASUREMENT MODEL ODOM
-    ColumnVector measNoiseOdom_Mu(6);  measNoiseOdom_Mu = 0;
-    SymmetricMatrix measNoiseOdom_Cov(6);  measNoiseOdom_Cov = 0;
-    for (unsigned int i=1; i<=6; i++) measNoiseOdom_Cov(i,i) = 1;
-    Gaussian measurement_Uncertainty_Odom(measNoiseOdom_Mu, measNoiseOdom_Cov);
-    Matrix Hodom(6,6);  Hodom = 0;
-    Hodom(1,1) = 1;    Hodom(2,2) = 1;    Hodom(6,6) = 1;
-    odom_meas_pdf_   = new LinearAnalyticConditionalGaussian(Hodom, measurement_Uncertainty_Odom);
-    odom_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(odom_meas_pdf_);
+  /****************************
+   * NonLinear system model      *
+   ***************************/
 
-    // create MEASUREMENT MODEL IMU
-    ColumnVector measNoiseImu_Mu(3);  measNoiseImu_Mu = 0;
-    SymmetricMatrix measNoiseImu_Cov(3);  measNoiseImu_Cov = 0;
-    for (unsigned int i=1; i<=3; i++) measNoiseImu_Cov(i,i) = 1;
-    Gaussian measurement_Uncertainty_Imu(measNoiseImu_Mu, measNoiseImu_Cov);
-    Matrix Himu(3,6);  Himu = 0;
-    Himu(1,4) = 1;    Himu(2,5) = 1;    Himu(3,6) = 1;
-    imu_meas_pdf_   = new LinearAnalyticConditionalGaussian(Himu, measurement_Uncertainty_Imu);
-    imu_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(imu_meas_pdf_);
+  // create gaussian
+  ColumnVector sys_noise_Mu(STATE_SIZE);
+  sys_noise_Mu(1) = MU_SYSTEM_NOISE_X;
+  sys_noise_Mu(2) = MU_SYSTEM_NOISE_Y;
+  sys_noise_Mu(3) = MU_SYSTEM_NOISE_THETA;
+  sys_noise_Mu(4) = MU_SYSTEM_NOISE_VEL;
+  sys_noise_Mu(5) = MU_SYSTEM_NOISE_OMG;
 
-    // create MEASUREMENT MODEL VO
-    ColumnVector measNoiseVo_Mu(6);  measNoiseVo_Mu = 0;
-    SymmetricMatrix measNoiseVo_Cov(6);  measNoiseVo_Cov = 0;
-    for (unsigned int i=1; i<=6; i++) measNoiseVo_Cov(i,i) = 1;
-    Gaussian measurement_Uncertainty_Vo(measNoiseVo_Mu, measNoiseVo_Cov);
-    Matrix Hvo(6,6);  Hvo = 0;
-    Hvo(1,1) = 1;    Hvo(2,2) = 1;    Hvo(3,3) = 1;    Hvo(4,4) = 1;    Hvo(5,5) = 1;    Hvo(6,6) = 1;
-    vo_meas_pdf_   = new LinearAnalyticConditionalGaussian(Hvo, measurement_Uncertainty_Vo);
-    vo_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(vo_meas_pdf_);*/
-  };
+  SymmetricMatrix sys_Q(STATE_SIZE);
+  sys_Q = 0.0;
+  sys_Q(1,1) = SIGMA_SYSTEM_NOISE_X*dt_; sys_Q(1,2) = 0.0; sys_Q(1,3) = 0.0; sys_Q(1,4) = 0.0; sys_Q(1,5) = 0.0;
+  sys_Q(2,1) = 0.0; sys_Q(2,2) = SIGMA_SYSTEM_NOISE_Y*dt_; sys_Q(2,3) = 0.0; sys_Q(2,4) = 0.0; sys_Q(2,5) = 0.0;
+  sys_Q(3,1) = 0.0; sys_Q(3,2) = 0.0; sys_Q(3,3) = SIGMA_SYSTEM_NOISE_THETA*dt_; sys_Q(3,4) = 0.0; sys_Q(3,5) = 0.0;
+  sys_Q(4,1) = 0.0; sys_Q(4,2) = 0.0; sys_Q(4,3) = 0.0; sys_Q(4,4) = SIGMA_SYSTEM_NOISE_VEL*dt_; sys_Q(4,5) = 0.0;
+  sys_Q(5,1) = 0.0; sys_Q(5,2) = 0.0; sys_Q(5,3) = 0.0; sys_Q(5,4) = 0.0; sys_Q(5,5) = SIGMA_SYSTEM_NOISE_OMG*dt_;
 
+  Gaussian system_Uncertainty(sys_noise_Mu, sys_Q);
 
+  // create the model
+  sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_);
+  sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
 
-  // destructor
-  RobotPrecisionEKF::~RobotPrecisionEKF(){
-    if (filter_) delete filter_;
-    if (prior_)  delete prior_;
-    delete odom_meas_model_;
-    delete odom_meas_pdf_;
-    delete imu_meas_model_;
-    delete imu_meas_pdf_;
-    delete gps_meas_model_;
-    delete gps_meas_pdf_;
-    delete sys_pdf_;
-    delete sys_model_;
-  };
+  /*********************************
+   * Initialise measurement model *
+   ********************************/
 
+  // XY MEASUREMENT at Arbitrary relationship to origin (nonlinear)
+  // y = [xgps;  = [x + xarm*cos(tht) - yarm*sin(tht); 
+  //      ygps]     y + xarm*sin(tht) + yarm*cos(tht)]
+  // Construct the measurement noise
+  ColumnVector meas_noise_Mu_gps(GPS_MEAS_SIZE);
+  meas_noise_Mu_gps(1) = GPS_MU_MEAS_NOISE_X;
+  meas_noise_Mu_gps(2) = GPS_MU_MEAS_NOISE_Y;
+  SymmetricMatrix meas_R_gps(GPS_MEAS_SIZE);
+  meas_R_gps(1,1) = GPS_SIGMA_MEAS_NOISE_X; meas_R_gps(1,2) = 0.0;
+  meas_R_gps(2,1) = 0.0; meas_R_gps(2,2) = GPS_SIGMA_MEAS_NOISE_Y;
+  Gaussian measurement_Uncertainty_gps(meas_noise_Mu_gps, meas_R_gps);
 
-  // initialize prior density of filter 
-  void RobotPrecisionEKF::initialize(const Transform& prior, const Time& time)
-  {
-    // set prior of filter
-    ColumnVector prior_Mu(5); 
-    //decomposeTransform(prior, prior_Mu(1), prior_Mu(2), prior_Mu(3), prior_Mu(4), prior_Mu(5), prior_Mu(6));
-    SymmetricMatrix prior_Cov(5); 
-    for (unsigned int i=1; i<=5; i++) {
-      for (unsigned int j=1; j<=5; j++){
-        if (i==j)  prior_Cov(i,j) = pow(0.001,2);
-        else prior_Cov(i,j) = 0;
-      }
-    }
-    prior_  = new Gaussian(prior_Mu,prior_Cov);
-    filter_ = new ExtendedKalmanFilter(prior_);
+  // create the measurement model
+  gps_meas_pdf_   = new NonLinearAnalyticConditionalGaussianGPSMeasurement(measurement_Uncertainty_gps);
+  gps_meas_model_ = new AnalyticMeasurementModelGaussianUncertainty(gps_meas_pdf_);
+  
+  
+  // ODOMETRY MEASUREMENT MODEL (linear)
+  // y = [vR; = [v+b/2; 
+  //      vL]    v-b/2]
+  Matrix H_odom(ODOM_MEAS_SIZE,STATE_SIZE);
+  H_odom = 0.0; //TODO: Replace the hardcoded track width with the track with from odometry
+  H_odom(1,1) = 0.0; H_odom(1,2) = 0.0; H_odom(1,3) = 0.0; H_odom(1,4) = 1.0; H_odom(1,5) = ODOM_TRACK/2;
+  H_odom(2,1) = 0.0; H_odom(2,2) = 0.0; H_odom(2,3) = 0.0; H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2;
+  
+  // Construct the measurement noise
+  ColumnVector meas_noise_Mu_odom(ODOM_MEAS_SIZE);
+  meas_noise_Mu_odom(1) = ODOM_MU_MEAS_NOISE_X;
+  meas_noise_Mu_odom(2) = ODOM_MU_MEAS_NOISE_Y;
+  SymmetricMatrix meas_R_odom(ODOM_MEAS_SIZE);
+  meas_R_odom(1,1) = ODOM_SIGMA_MEAS_NOISE_R; meas_R_odom(1,2) = 0.0;
+  meas_R_odom(2,1) = 0.0; meas_R_odom(2,2) = ODOM_SIGMA_MEAS_NOISE_L;
+  Gaussian measurement_Uncertainty_odom(meas_noise_Mu_odom, meas_R_odom);
 
-    // remember prior
-    addMeasurement(StampedTransform(prior, time, "odom_combined", "base_footprint"));
-    filter_estimate_old_vec_ = prior_Mu;
-    filter_estimate_old_ = prior;
-    filter_time_old_     = time;
-
-    // filter initialized
-    filter_initialized_ = true;
-  }
-
-  // update filter
-  bool RobotPrecisionEKF::update(bool odom_active, bool imu_active, bool gps_active, const Time&  filter_time, bool& diagnostics_res)
-  {
-    // only update filter when it is initialized
-    if (!filter_initialized_){
-      ROS_INFO("Cannot update filter when filter was not initialized first.");
-      return false;
-    }
-    
-    /*
-    // only update filter for time later than current filter time
-    double dt = (filter_time - filter_time_old_).toSec();
-    if (dt == 0) return false;
-    if (dt <  0){
-      ROS_INFO("Will not update robot pose with time %f sec in the past.", dt);
-      return false;
-    }
-    ROS_DEBUG("Update filter at time %f with dt %f", filter_time.toSec(), dt);
+  // create the measurement model
+  odom_meas_pdf_   = new LinearAnalyticConditionalGaussian(H_odom, measurement_Uncertainty_odom);
+  odom_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(odom_meas_pdf_);
 
 
-    // system update filter
-    // --------------------
-    // for now only add system noise
-    ColumnVector vel_desi(2); vel_desi = 0;
-    filter_->Update(sys_model_, vel_desi);
+  /****************************
+   * Linear prior DENSITY     *
+   ***************************/
+   // Continuous Gaussian prior (for Kalman filters)
+  ColumnVector prior_Mu(STATE_SIZE);
+  prior_Mu(1) = PRIOR_MU_X;
+  prior_Mu(2) = PRIOR_MU_Y;
+  prior_Mu(3) = PRIOR_MU_THETA;
+  prior_Mu(4) = PRIOR_MU_VEL;
+  prior_Mu(5) = PRIOR_MU_OMG;
+  SymmetricMatrix prior_Cov(STATE_SIZE);
+  prior_Cov(1,1) = PRIOR_COV_X; prior_Cov(1,2) = 0.0; prior_Cov(1,3) = 0.0; prior_Cov(1,4) = 0.0; prior_Cov(1,5) = 0.0;
+  prior_Cov(2,1) = 0.0; prior_Cov(2,2) = PRIOR_COV_Y; prior_Cov(2,3) = 0.0; prior_Cov(2,4) = 0.0; prior_Cov(2,5) = 0.0;
+  prior_Cov(3,1) = 0.0; prior_Cov(3,2) = 0.0; prior_Cov(3,3) = PRIOR_COV_THETA; prior_Cov(3,4) = 0.0; prior_Cov(3,5) = 0.0;
+  prior_Cov(4,1) = 0.0; prior_Cov(4,2) = 0.0; prior_Cov(4,3) = 0.0; prior_Cov(4,4) = PRIOR_COV_VEL; prior_Cov(4,5) = 0.0;
+  prior_Cov(5,1) = 0.0; prior_Cov(5,2) = 0.0; prior_Cov(5,3) = 0.0; prior_Cov(5,4) = 0.0; prior_Cov(5,5) = PRIOR_COV_OMG;
+  prior_  = new Gaussian(prior_Mu,prior_Cov);
 
-    
-    // process odom measurement
-    // ------------------------
-    ROS_DEBUG("Process odom meas");
-    if (odom_active){
-      if (!transformer_.canTransform("base_footprint","wheelodom", filter_time)){
-        ROS_ERROR("filter time older than odom message buffer");
-        return false;
-      }
-      transformer_.lookupTransform("wheelodom", "base_footprint", filter_time, odom_meas_);
-      if (odom_initialized_){
-        // convert absolute odom measurements to relative odom measurements in horizontal plane
-        Transform odom_rel_frame =  Transform(tf::createQuaternionFromYaw(filter_estimate_old_vec_(6)), 
-                                filter_estimate_old_.getOrigin()) * odom_meas_old_.inverse() * odom_meas_;
-        ColumnVector odom_rel(6); 
-        decomposeTransform(odom_rel_frame, odom_rel(1), odom_rel(2), odom_rel(3), odom_rel(4), odom_rel(5), odom_rel(6));
-        angleOverflowCorrect(odom_rel(6), filter_estimate_old_vec_(6));
-        // update filter
-        odom_meas_pdf_->AdditiveNoiseSigmaSet(odom_covariance_ * pow(dt,2));
+  /******************************
+   * Construction of the Filter *
+   ******************************/
+  filter_ = new ExtendedKalmanFilter(prior_);
 
-          ROS_DEBUG("Update filter with odom measurement %f %f %f %f %f %f", 
-                    odom_rel(1), odom_rel(2), odom_rel(3), odom_rel(4), odom_rel(5), odom_rel(6));
-        filter_->Update(odom_meas_model_, odom_rel);
-        diagnostics_odom_rot_rel_ = odom_rel(6);
-      }
-      else{
-        odom_initialized_ = true;
-        diagnostics_odom_rot_rel_ = 0;
-      }
-      odom_meas_old_ = odom_meas_;
-    }
-    // sensor not active
-    else odom_initialized_ = false;
-
-    
-    // process imu measurement
-    // -----------------------
-    if (imu_active){
-      if (!transformer_.canTransform("base_footprint","imu", filter_time)){
-        ROS_ERROR("filter time older than imu message buffer");
-        return false;
-      }
-      transformer_.lookupTransform("imu", "base_footprint", filter_time, imu_meas_);
-      if (imu_initialized_){
-        // convert absolute imu yaw measurement to relative imu yaw measurement 
-        Transform imu_rel_frame =  filter_estimate_old_ * imu_meas_old_.inverse() * imu_meas_;
-        ColumnVector imu_rel(3); double tmp;
-        decomposeTransform(imu_rel_frame, tmp, tmp, tmp, tmp, tmp, imu_rel(3));
-        decomposeTransform(imu_meas_,     tmp, tmp, tmp, imu_rel(1), imu_rel(2), tmp);
-        angleOverflowCorrect(imu_rel(3), filter_estimate_old_vec_(6));
-        diagnostics_imu_rot_rel_ = imu_rel(3);
-        // update filter
-        imu_meas_pdf_->AdditiveNoiseSigmaSet(imu_covariance_ * pow(dt,2));
-        filter_->Update(imu_meas_model_,  imu_rel);
-      }
-      else{
-        imu_initialized_ = true;
-        diagnostics_imu_rot_rel_ = 0;
-      }
-      imu_meas_old_ = imu_meas_; 
-    }
-    // sensor not active
-    else imu_initialized_ = false;
-    
-    
-    
-    // process vo measurement
-    // ----------------------
-    if (vo_active){
-      if (!transformer_.canTransform("base_footprint","vo", filter_time)){
-        ROS_ERROR("filter time older than vo message buffer");
-        return false;
-      }
-      transformer_.lookupTransform("vo", "base_footprint", filter_time, vo_meas_);
-      if (vo_initialized_){
-        // convert absolute vo measurements to relative vo measurements
-        Transform vo_rel_frame =  filter_estimate_old_ * vo_meas_old_.inverse() * vo_meas_;
-        ColumnVector vo_rel(6);
-        decomposeTransform(vo_rel_frame, vo_rel(1),  vo_rel(2), vo_rel(3), vo_rel(4), vo_rel(5), vo_rel(6));
-        angleOverflowCorrect(vo_rel(6), filter_estimate_old_vec_(6));
-        // update filter
-        vo_meas_pdf_->AdditiveNoiseSigmaSet(vo_covariance_ * pow(dt,2));
-        filter_->Update(vo_meas_model_,  vo_rel);
-      }
-      else vo_initialized_ = true;
-      vo_meas_old_ = vo_meas_;
-    }
-    // sensor not active
-    else vo_initialized_ = false;
-    
-    
-    // remember last estimate
-    filter_estimate_old_vec_ = filter_->PostGet()->ExpectedValueGet();
-    tf::Quaternion q;
-    q.setRPY(filter_estimate_old_vec_(4), filter_estimate_old_vec_(5), filter_estimate_old_vec_(6));
-    filter_estimate_old_ = Transform(q,
-				     Vector3(filter_estimate_old_vec_(1), filter_estimate_old_vec_(2), filter_estimate_old_vec_(3)));
-    filter_time_old_ = filter_time;
-    addMeasurement(StampedTransform(filter_estimate_old_, filter_time, "odom_combined", "base_footprint"));
-
-    // diagnostics
-    diagnostics_res = true;
-    if (odom_active && imu_active){
-      double diagnostics = fabs(diagnostics_odom_rot_rel_ - diagnostics_imu_rot_rel_)/dt;
-      if (diagnostics > 0.3 && dt > 0.01){
-        diagnostics_res = false;
-      }
-    }
-*/
-    return true;
 };
 
-  void RobotPrecisionEKF::addMeasurement(const StampedTransform& meas)
-  {
-  /*
-    ROS_DEBUG("AddMeasurement from %s to %s:  (%f, %f, %f)  (%f, %f, %f, %f)",
-              meas.frame_id_.c_str(), meas.child_frame_id_.c_str(),
-              meas.getOrigin().x(), meas.getOrigin().y(), meas.getOrigin().z(),
-              meas.getRotation().x(),  meas.getRotation().y(), 
-              meas.getRotation().z(), meas.getRotation().w());
-    transformer_.setTransform( meas );*/
-  }
 
-  void RobotPrecisionEKF::addMeasurement(const StampedTransform& meas, const MatrixWrapper::SymmetricMatrix& covar)
-  {
-  /*
-    // check covariance
-    for (unsigned int i=0; i<covar.rows(); i++){
-      if (covar(i+1,i+1) == 0){
-        ROS_ERROR("Covariance specified for measurement on topic %s is zero", meas.child_frame_id_.c_str());
-        return;
-      }
-    }
-    // add measurements
-    addMeasurement(meas);
-    if (meas.child_frame_id_ == "wheelodom") odom_covariance_ = covar;
-    else if (meas.child_frame_id_ == "imu")  imu_covariance_  = covar;
-    else if (meas.child_frame_id_ == "vo")   vo_covariance_   = covar;
-    else ROS_ERROR("Adding a measurement for an unknown sensor %s", meas.child_frame_id_.c_str());*/
-  };
+// destructor
+RobotPrecisionEKF::~RobotPrecisionEKF(){
+  if (filter_) delete filter_;
+  if (prior_)  delete prior_;
+  delete odom_meas_model_;
+  delete odom_meas_pdf_;
+  //delete imu_meas_model_;
+  //delete imu_meas_pdf_;
+  delete gps_meas_model_;
+  delete gps_meas_pdf_;
+  delete sys_pdf_;
+  delete sys_model_;
+};
 
 
-  // get latest filter posterior as vector
-  void RobotPrecisionEKF::getEstimate(ColumnVector& estimate)
-  {
-    //estimate = filter_estimate_old_vec_;
-  };
-
-  // get filter posterior at time 'time' as Transform
-  void RobotPrecisionEKF::getEstimate(Time time, Transform& estimate)
-  {
-  /*
-    StampedTransform tmp;
-    if (!transformer_.canTransform("base_footprint","odom_combined", time)){
-      ROS_ERROR("Cannot get transform at time %f", time.toSec());
-      return;
-    }
-    transformer_.lookupTransform("odom_combined", "base_footprint", time, tmp);
-    estimate = tmp;*/
-  };
-
-  // get filter posterior at time 'time' as Stamped Transform
-  void RobotPrecisionEKF::getEstimate(Time time, StampedTransform& estimate)
-  {
-  /*
-    if (!transformer_.canTransform("odom_combined", "base_footprint", time)){
-      ROS_ERROR("Cannot get transform at time %f", time.toSec());
-      return;
-    }
-    transformer_.lookupTransform("odom_combined", "base_footprint", time, estimate);*/
-  };
-
-  // get most recent filter posterior as PoseWithCovarianceStamped
-  void RobotPrecisionEKF::getEstimate(geometry_msgs::PoseWithCovarianceStamped& estimate)
-  {
-  /*
-    // pose
-    StampedTransform tmp;
-    if (!transformer_.canTransform("odom_combined", "base_footprint", ros::Time())){
-      ROS_ERROR("Cannot get transform at time %f", 0.0);
-      return;
-    }
-    transformer_.lookupTransform("odom_combined", "base_footprint", ros::Time(), tmp);
-    poseTFToMsg(tmp, estimate.pose.pose);
-
-    // header
-    estimate.header.stamp = tmp.stamp_;
-    estimate.header.frame_id = "odom";
-
-    // covariance
-    SymmetricMatrix covar =  filter_->PostGet()->CovarianceGet();
-    for (unsigned int i=0; i<6; i++)
-      for (unsigned int j=0; j<6; j++)
-	estimate.pose.covariance[6*i+j] = covar(i+1,j+1);*/
-  };
-
-
-}; // namespace

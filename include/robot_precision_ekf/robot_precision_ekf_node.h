@@ -1,7 +1,7 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
 * 
-*  Copyright (c) 2008, Willow Garage, Inc.
+*  Copyright (c) 2013, EJ Kreinar, Case Western Reserve University
 *  All rights reserved.
 * 
 *  Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,8 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 
-/* Author: Wim Meeussen */
+// Based loosely on the robot_pose_ekf program by Wim Meeussen
+//  and Willow Garage
 
 #ifndef __ROBOT_PRECISION_EKF_NODE__
 #define __ROBOT_PRECISION_EKF_NODE__
@@ -56,9 +57,6 @@
 
 // log files
 #include <fstream>
-
-namespace estimation
-{
 
 /** \mainpage
  *  \htmlinclude manifest.html
@@ -106,7 +104,7 @@ private:
   ros::ServiceServer state_srv_;
 
   // ekf filter
-  RobotPrecisionEKF my_filter_;
+  RobotPrecisionEKF* my_filter_;
 
   // estimated robot pose message to send
   geometry_msgs::PoseWithCovarianceStamped  output_; 
@@ -138,7 +136,5 @@ private:
   unsigned int odom_callback_counter_, imu_callback_counter_, gps_callback_counter_, ekf_sent_counter_;
 
 }; // class
-
-}; // namespace
 
 #endif

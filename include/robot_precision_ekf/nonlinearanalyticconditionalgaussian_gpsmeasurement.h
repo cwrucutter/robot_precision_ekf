@@ -1,4 +1,4 @@
-// Copyright (C) 2008 Wim Meeussen <meeussen at willowgarage com>
+// Copyright (C) 2013 EJ Kreinar, Case Western Reserve University
 //  
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -16,10 +16,11 @@
 //  
 
 
-#ifndef __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_ROBOT__
-#define __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_ROBOT__
+#ifndef __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_GPSMEASUREMENT__
+#define __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_GPSMEASUREMENT__
 
 #include <pdf/analyticconditionalgaussian_additivenoise.h>
+#include "ekf_const.h"
 
 namespace BFL
 {
@@ -30,7 +31,7 @@ namespace BFL
      - Covariance is independent of the ConditionalArguments, and is
      the covariance of the Noise pdf
   */
-  class NonLinearAnalyticConditionalGaussianRobot : public AnalyticConditionalGaussianAdditiveNoise
+  class NonLinearAnalyticConditionalGaussianGPSMeasurement : public AnalyticConditionalGaussianAdditiveNoise
   {
     public:
       /// Constructor
@@ -43,10 +44,10 @@ namespace BFL
           and \f$\mu\f$
           @param additiveNoise Pdf representing the additive Gaussian uncertainty
       */
-      NonLinearAnalyticConditionalGaussianRobot( const Gaussian& additiveNoise);
+      NonLinearAnalyticConditionalGaussianGPSMeasurement( const Gaussian& additiveNoise);
 
       /// Destructor
-      virtual ~NonLinearAnalyticConditionalGaussianRobot();
+      virtual ~NonLinearAnalyticConditionalGaussianGPSMeasurement();
 
       // redefine virtual functions
       virtual MatrixWrapper::ColumnVector    ExpectedValueGet() const;

@@ -1,7 +1,7 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
 * 
-*  Copyright (c) 2008, Willow Garage, Inc.
+*  Copyright (c) 2013, EJ Kreinar, Case Western Reserve University
 *  All rights reserved.
 * 
 *  Redistribution and use in source and binary forms, with or without
@@ -32,19 +32,23 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 
-/* Author: Wim Meeussen */
-
 #ifndef __ROBOT_PRECISION_EKF__
 #define __ROBOT_PRECISION_EKF__
 
 // bayesian filtering
-#include <filter/extendedkalmanfilter.h>
 #include <wrappers/matrix/matrix_wrapper.h>
+
+#include <filter/extendedkalmanfilter.h>
+
 #include <model/linearanalyticsystemmodel_gaussianuncertainty.h>
 #include <model/linearanalyticmeasurementmodel_gaussianuncertainty.h>
+
 #include <pdf/analyticconditionalgaussian.h>
 #include <pdf/linearanalyticconditionalgaussian.h>
-#include "NonLinearAnalyticConditionalGaussianRobot.h"
+#include "nonlinearanalyticconditionalgaussian_robot.h"
+#include "nonlinearanalyticconditionalgaussian_gpsmeasurement.h"
+
+#include "ekf_const.h"
 
 // TF
 #include <tf/tf.h>
@@ -55,98 +59,41 @@
 // log files
 #include <fstream>
 
-namespace estimation
-{
-
 class RobotPrecisionEKF
 {
 public:
   /// constructor
-  RobotPrecisionEKF();
+  RobotPrecisionEKF(double timestep);
 
   /// destructor
   virtual ~RobotPrecisionEKF();
 
-  /** update the extended Kalman filter
-   * \param odom_active specifies if the odometry sensor is active or not
-   * \param imu_active specifies if the imu sensor is active or not
-   * \param gps_active specifies if the gps sensor is active or not
-   * \param filter_time update the ekf up to this time
-   * \param diagnostics_res returns false if the diagnostics found that the sensor measurements are inconsistent
-   * returns true on successfull update
-   */
-  bool update(bool gps_active, bool odom_active, bool imu_active, const ros::Time& filter_time, bool& diagnostics_res);
-
-  /** initialize the extended Kalman filter
-   * \param prior the prior robot pose
-   * \param time the initial time of the ekf
-   */
-  void initialize(const tf::Transform& prior, const ros::Time& time);
-
-  /** check if the filter is initialized
-   * returns true if the ekf has been initialized already
-   */
-  bool isInitialized() {return filter_initialized_;};
-
-  /** get the filter posterior
-   * \param estimate the filter posterior as a columnvector
-   */
-  void getEstimate(MatrixWrapper::ColumnVector& estimate);
-
-  /** get the filter posterior
-   * \param time the time of the filter posterior
-   * \param estimate the filter posterior as a tf transform
-   */
-  void getEstimate(ros::Time time, tf::Transform& estimate);
-
-  /** get the filter posterior
-   * \param time the time of the filter posterior
-   * \param estimate the filter posterior as a stamped tf transform
-   */
-  void getEstimate(ros::Time time, tf::StampedTransform& estimate);
-
-  /** get the filter posterior
-   * \param estimate the filter posterior as a pose with covariance
-   */
-  void getEstimate(geometry_msgs::PoseWithCovarianceStamped& estimate);
-
-  /** Add a sensor measurement to the measurement buffer
-   * \param meas the measurement to add
-   */
-  void addMeasurement(const tf::StampedTransform& meas);
-
-  /** Add a sensor measurement to the measurement buffer
-   * \param meas the measurement to add
-   * \param covar the 6x6 covariance matrix of this measurement, as defined in the PoseWithCovariance message
-   */
-  void addMeasurement(const tf::StampedTransform& meas, const MatrixWrapper::SymmetricMatrix& covar);
-
 private:
   // pdf / model / filter
-  BFL::AnalyticSystemModelGaussianUncertainty*            sys_model_;
-  BFL::NonLinearAnalyticConditionalGaussianRobot*         sys_pdf_;
-  BFL::LinearAnalyticConditionalGaussian*                 gps_meas_pdf_;
-  BFL::LinearAnalyticMeasurementModelGaussianUncertainty* gps_meas_model_;
-  BFL::LinearAnalyticConditionalGaussian*                 odom_meas_pdf_;
-  BFL::LinearAnalyticMeasurementModelGaussianUncertainty* odom_meas_model_;
-  BFL::LinearAnalyticConditionalGaussian*                 imu_meas_pdf_;
-  BFL::LinearAnalyticMeasurementModelGaussianUncertainty* imu_meas_model_;
+  BFL::NonLinearAnalyticConditionalGaussianRobot*          sys_pdf_;
+  BFL::AnalyticSystemModelGaussianUncertainty*             sys_model_;
+  BFL::NonLinearAnalyticConditionalGaussianGPSMeasurement* gps_meas_pdf_;
+  BFL::AnalyticMeasurementModelGaussianUncertainty*        gps_meas_model_;
+  BFL::LinearAnalyticConditionalGaussian*                  odom_meas_pdf_;
+  BFL::LinearAnalyticMeasurementModelGaussianUncertainty*  odom_meas_model_;
+  //BFL::LinearAnalyticConditionalGaussian*                 imu_meas_pdf_;
+  //BFL::LinearAnalyticMeasurementModelGaussianUncertainty* imu_meas_model_;
   BFL::Gaussian*                                          prior_;
   BFL::ExtendedKalmanFilter*                              filter_;
   MatrixWrapper::SymmetricMatrix                          gps_covariance_, odom_covariance_, imu_covariance_;
 
   // vars
-  MatrixWrapper::ColumnVector vel_desi_, filter_estimate_old_vec_;
+  bool filter_initialized_, odom_initialized_, imu_initialized_, gps_initialized_;
+  double dt_;
+  /*MatrixWrapper::ColumnVector vel_desi_, filter_estimate_old_vec_;
   tf::Transform filter_estimate_old_;
   tf::StampedTransform odom_meas_, odom_meas_old_, imu_meas_, imu_meas_old_, gps_meas_, gps_meas_old_;
-  ros::Time filter_time_old_;
-  bool filter_initialized_, odom_initialized_, imu_initialized_, gps_initialized_;
+  ros::Time filter_time_old_;*/
 
   // tf transformer
   tf::Transformer transformer_;
 
 }; // class
 
-}; // namespace
 
 #endif
