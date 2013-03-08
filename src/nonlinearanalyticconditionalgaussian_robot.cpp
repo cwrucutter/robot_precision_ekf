@@ -18,6 +18,7 @@
 #include <robot_precision_ekf/nonlinearanalyticconditionalgaussian_robot.h>
 #include <wrappers/rng/rng.h> // Wrapper around several rng
                               // libraries
+#include "angles/angles.h"
 #define NUMCONDARGUMENTS 1
 #define NUMSTATES 5
 
@@ -50,7 +51,7 @@ namespace BFL
     double tht_mid = state(3)+state(5)*dt/2; // Theta mid-pt = Thtold + w*dt/2
     state(1) = state(1) + state(4)*dt*cos(tht_mid);
     state(2) = state(2) + state(4)*dt*sin(tht_mid);
-    state(3) = state(3) + state(5)*dt;
+    state(3) = angles::normalize_angle(state(3) + state(5)*dt);
     state(4) = state(4);
     state(5) = state(5);
     return state + AdditiveNoiseMuGet();

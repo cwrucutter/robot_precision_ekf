@@ -1,10 +1,10 @@
-<package>
+ <package>
   <description brief="robot_precision_ekf">
 
-     robot_precision_ekf
+     Robot Precision EKF is used as an AMCL Replacement. Robot Precision EKF fuses a global reference sensor that returns an x,y measurement (eg, GPS), with other velocity sensors (IMU, odometry). The EKF estimates the states: (x,y,theta,velocity,angular velocity). Robot Precision EKF uses a velocity motion model to measure velocities, which allows additional sensors to correct/measure velocity rather than ONLY velocity. 
 
   </description>
-  <author>CWRUCutter</author>
+  <author>EJ Kreinar</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/robot_precision_ekf</url>

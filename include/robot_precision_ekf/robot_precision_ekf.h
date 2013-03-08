@@ -64,6 +64,16 @@ class RobotPrecisionEKF
 public:
   /// constructor
   RobotPrecisionEKF(double timestep);
+  
+  void systemUpdate();
+  
+  void measurementUpdateGPS(double x, double y);
+  
+  void measurementUpdateOdom(double vR, double vL);
+  
+  MatrixWrapper::ColumnVector getMean();
+  
+  MatrixWrapper::SymmetricMatrix getCovariance();
 
   /// destructor
   virtual ~RobotPrecisionEKF();
@@ -81,6 +91,8 @@ private:
   BFL::Gaussian*                                          prior_;
   BFL::ExtendedKalmanFilter*                              filter_;
   MatrixWrapper::SymmetricMatrix                          gps_covariance_, odom_covariance_, imu_covariance_;
+  
+  BFL::Pdf<MatrixWrapper::ColumnVector> * posterior_;
 
   // vars
   bool filter_initialized_, odom_initialized_, imu_initialized_, gps_initialized_;

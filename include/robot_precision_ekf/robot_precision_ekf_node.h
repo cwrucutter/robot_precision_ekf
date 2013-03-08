@@ -63,14 +63,13 @@
  * 
  * <b>Package Summary</b>
  * This package provides two main classes: 
- *  1) OdomEstimation performs all sensor fusion operations, and 
- *  2) OdomEstimationNode provides a ROS wrapper around OdomEstimation
+ *  1) RobotPrecisionEKF performs all sensor fusion operations, and 
+ *  2) RobotPrecisionEKFNode provides a ROS wrapper around RobotPrecisionEKF
 */
 
 typedef boost::shared_ptr<nav_msgs::Odometry const> OdomConstPtr;
 typedef boost::shared_ptr<sensor_msgs::Imu const> ImuConstPtr;
-typedef boost::shared_ptr<nav_msgs::Odometry const> GpsConstPtr;
-typedef boost::shared_ptr<geometry_msgs::Twist const> VelConstPtr;
+typedef boost::shared_ptr<geometry_msgs::PoseStamped const> GpsConstPtr;
 
 class RobotPrecisionEKFNode
 {
@@ -84,6 +83,9 @@ public:
 private:
   /// the mail filter loop that will be called periodically
   void spin(const ros::TimerEvent& e);
+  
+  /// Publishes the Filter solution
+  void publish();
 
   /// callback function for gps data
   void gpsCallback(const GpsConstPtr& gps);
@@ -94,9 +96,6 @@ private:
   /// callback function for imu data
   void imuCallback(const ImuConstPtr& imu);
 
-  /// get the status of the filter
-  //bool getStatus(robot_pose_ekf::GetStatus::Request& req, robot_pose_ekf::GetStatus::Response& resp);
-
   ros::NodeHandle node_;
   ros::Timer timer_;
   ros::Publisher pose_pub_;
@@ -104,30 +103,36 @@ private:
   ros::ServiceServer state_srv_;
 
   // ekf filter
-  RobotPrecisionEKF* my_filter_;
+  RobotPrecisionEKF* ekf_filter_;
 
   // estimated robot pose message to send
   geometry_msgs::PoseWithCovarianceStamped  output_; 
   // TODO: Also send the transform from map frame to Odom
 
-  // robot state
-  tf::TransformListener    robot_state_;
-  tf::TransformBroadcaster odom_broadcaster_;
+  // Transform handlers
+  tf::TransformBroadcaster* tfb_;
+  tf::TransformListener* tf_;
+  
+  // frame names
+  std::string global_frame_id_, odom_frame_id_, base_frame_id_;
 
-  // vectors
+  // variables
+  ros::Duration transform_tolerance_;
+  tf::Transform latest_tf_;
+  ros::Time odom_time_, imu_time_, gps_time_;
+  ros::Time odom_stamp_, imu_stamp_, gps_stamp_, filter_stamp_;
+  bool odom_used_, imu_used_, gps_used_;
+  double timeout_;
+  bool debug_, self_diagnose_;
+  /*
   tf::Transform odom_meas_, imu_meas_, gps_meas_;
   tf::Transform base_gps_init_;
   tf::StampedTransform camera_base_;
-  ros::Time odom_time_, imu_time_, gps_time_;
-  ros::Time odom_stamp_, imu_stamp_, gps_stamp_, filter_stamp_;
   ros::Time odom_init_stamp_, imu_init_stamp_, gps_init_stamp_;
   bool odom_active_, imu_active_, gps_active_;
-  bool odom_used_, imu_used_, gps_used_;
   bool odom_initializing_, imu_initializing_, gps_initializing_;
-  double timeout_;
   MatrixWrapper::SymmetricMatrix odom_covariance_, imu_covariance_, gps_covariance_;
-  bool debug_, self_diagnose_;
-  std::string output_frame_;
+  */
 
   // log files for debugging
   std::ofstream odom_file_, imu_file_, gps_file_, corr_file_, time_file_, extra_file_;

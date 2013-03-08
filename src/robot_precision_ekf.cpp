@@ -52,7 +52,7 @@ RobotPrecisionEKF::RobotPrecisionEKF(double timestep):
   dt_(timestep)
 {
   /****************************
-   * NonLinear system model      *
+   * NonLinear system model   *
    ***************************/
 
   // create gaussian
@@ -78,7 +78,7 @@ RobotPrecisionEKF::RobotPrecisionEKF(double timestep):
   sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
 
   /*********************************
-   * Initialise measurement model *
+   * Initialise measurement models *
    ********************************/
 
   // XY MEASUREMENT at Arbitrary relationship to origin (nonlinear)
@@ -145,6 +145,53 @@ RobotPrecisionEKF::RobotPrecisionEKF(double timestep):
 
 };
 
+void RobotPrecisionEKF::systemUpdate()
+{
+  // System update
+  filter_->Update(sys_model_);
+  
+  // Store posterior
+  posterior_ = filter_->PostGet();
+}
+
+void RobotPrecisionEKF::measurementUpdateGPS(double x, double y)
+{
+  // Prepare measurement
+  ColumnVector gps(GPS_MEAS_SIZE);
+  gps(1) = x;
+  gps(2) = y;
+  
+  // Update
+  filter_->Update(gps_meas_model_, gps);
+  
+  // Store posterior
+  posterior_ = filter_->PostGet();
+}
+
+void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
+{
+  //Prepare measurement
+  ColumnVector odom(ODOM_MEAS_SIZE);
+  odom(1) = vR;
+  odom(2) = vL;
+  
+  // Update
+  filter_->Update(odom_meas_model_,odom);
+  
+  // Store posterior
+  posterior_ = filter_->PostGet();
+}
+
+
+MatrixWrapper::ColumnVector RobotPrecisionEKF::getMean()
+{
+  return posterior_->ExpectedValueGet();
+}
+  
+MatrixWrapper::SymmetricMatrix RobotPrecisionEKF::getCovariance()
+{
+  return posterior_->CovarianceGet();
+}
 
 // destructor
 RobotPrecisionEKF::~RobotPrecisionEKF(){
