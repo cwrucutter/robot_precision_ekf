@@ -1,0 +1,17 @@
+<package>
+  <description brief="robot_precision_ekf">
+
+     robot_precision_ekf
+
+  </description>
+  <author>CWRUCutter</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/robot_precision_ekf</url>
+  <depend package="roscpp"/>
+  <depend package="bfl"/>
+  <depend package="tf"/>
+
+</package>
+
+
