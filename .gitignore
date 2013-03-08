@@ -1,0 +1,12 @@
+bin/
+build/
+msg_gen/
+srv_gen/
+lib/
+.svn/
+*.swp
+*.pyo
+*.pyc
+_*.py
+*~
+*.bag

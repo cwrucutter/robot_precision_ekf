@@ -16,6 +16,14 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
+rosbuild_add_boost_directories()
+
+rosbuild_add_executable(robot_precision_ekf 
+                       src/robot_precision_ekf.cpp 
+                       src/NonLinearAnalyticConditionalGaussianRobot.cpp 
+                       src/robot_precision_ekf_node.cpp)
+rosbuild_link_boost(robot_precision_ekf thread)
+
 #uncomment if you have defined messages
 #rosbuild_genmsg()
 #uncomment if you have defined services
