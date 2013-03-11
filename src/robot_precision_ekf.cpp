@@ -103,8 +103,8 @@ RobotPrecisionEKF::RobotPrecisionEKF(double timestep):
   //      vL]    v-b/2]
   Matrix H_odom(ODOM_MEAS_SIZE,STATE_SIZE);
   H_odom = 0.0; //TODO: Replace the hardcoded track width with the track with from odometry
-  H_odom(1,1) = 0.0; H_odom(1,2) = 0.0; H_odom(1,3) = 0.0; H_odom(1,4) = 1.0; H_odom(1,5) = ODOM_TRACK/2;
-  H_odom(2,1) = 0.0; H_odom(2,2) = 0.0; H_odom(2,3) = 0.0; H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2;
+  H_odom(1,4) = 1.0; H_odom(1,5) = ODOM_TRACK/2;
+  H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2;
   
   // Construct the measurement noise
   ColumnVector meas_noise_Mu_odom(ODOM_MEAS_SIZE);

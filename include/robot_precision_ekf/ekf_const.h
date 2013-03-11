@@ -54,8 +54,8 @@
 #define SIGMA_SYSTEM_NOISE_X pow(0.01,2)
 #define SIGMA_SYSTEM_NOISE_Y pow(0.01,2)
 #define SIGMA_SYSTEM_NOISE_THETA pow(2*M_PI/180,2)
-#define SIGMA_SYSTEM_NOISE_VEL pow(0.05,2)
-#define SIGMA_SYSTEM_NOISE_OMG pow(0.05,2)
+#define SIGMA_SYSTEM_NOISE_VEL pow(0.5,2)
+#define SIGMA_SYSTEM_NOISE_OMG pow(0.5,2)
 
 // GPS Measurement
 #define GPS_LEVERARM_X -0.45 // TODO: Pull the leverarm from the base_link->base_gps transform

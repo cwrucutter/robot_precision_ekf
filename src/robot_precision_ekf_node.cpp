@@ -144,6 +144,22 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   odom_callback_counter_++;
   odom_stamp_ = odom->header.stamp;
   odom_time_  = Time::now();
+  
+  double v, w, vR, vL;
+  v = odom->twist.twist.linear.x;
+  w = odom->twist.twist.angular.z;
+  vR = v + ODOM_TRACK/2*w;
+  vL = v - ODOM_TRACK/2*w;
+  
+  ekf_filter_->measurementUpdateOdom(vR, vL);
+  
+  cout << endl << endl;
+  cout << "Encoders:" << endl;
+  cout << "v: " << v << " w: " << w << endl
+       << "vR: " << vR << " vL: " << vL << endl;
+  cout << "Encoder Update: " << endl;
+  cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
+       << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
 };
 
 
