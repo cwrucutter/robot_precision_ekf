@@ -104,11 +104,21 @@ private:
 
   // ekf filter
   RobotPrecisionEKF* ekf_filter_;
-
+  
   // estimated robot pose message to send
   geometry_msgs::PoseWithCovarianceStamped  output_; 
-  // TODO: Also send the transform from map frame to Odom
 
+  // Filter parameters
+  double sigma_sys_x_;
+  double sigma_sys_y_;
+  double sigma_sys_tht_;
+  double sigma_sys_vel_;
+  double sigma_sys_omg_;
+  double sigma_meas_gps_x_;
+  double sigma_meas_gps_y_;
+  double sigma_meas_odom_vR_;
+  double sigma_meas_odom_vL_;
+  
   // Transform handlers
   tf::TransformBroadcaster* tfb_;
   tf::TransformListener* tf_;
@@ -124,16 +134,7 @@ private:
   bool odom_used_, imu_used_, gps_used_;
   double timeout_;
   bool debug_, self_diagnose_;
-  /*
-  tf::Transform odom_meas_, imu_meas_, gps_meas_;
-  tf::Transform base_gps_init_;
-  tf::StampedTransform camera_base_;
-  ros::Time odom_init_stamp_, imu_init_stamp_, gps_init_stamp_;
-  bool odom_active_, imu_active_, gps_active_;
-  bool odom_initializing_, imu_initializing_, gps_initializing_;
-  MatrixWrapper::SymmetricMatrix odom_covariance_, imu_covariance_, gps_covariance_;
-  */
-
+  
   // log files for debugging
   std::ofstream odom_file_, imu_file_, gps_file_, corr_file_, time_file_, extra_file_;
 

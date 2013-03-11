@@ -56,20 +56,35 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   tfb_ = new tf::TransformBroadcaster();
   tf_ = new tf::TransformListener();
 
-  // paramters
-  double tmp_tol;
+  // General Parameters
   nh_private.param("global_frame_id", global_frame_id_, std::string("map"));
   nh_private.param("odom_frame_id", odom_frame_id_, std::string("odom"));
   nh_private.param("base_frame_id", base_frame_id_, std::string("base_link"));
   nh_private.param("sensor_timeout", timeout_, 1.0);
-  nh_private.param("transform_tolerance", tmp_tol, 0.1);
+  
+  // Filter parameters
   nh_private.param("odom_used", odom_used_, true);
   nh_private.param("imu_used",  imu_used_, true);
   nh_private.param("gps_used",   gps_used_, true);
-  nh_private.param("debug",   debug_, false);
-  nh_private.param("self_diagnose",  self_diagnose_, false);
   double freq;
   nh_private.param("freq", freq, 10.0);
+  double tmp_tol;
+  nh_private.param("transform_tolerance", tmp_tol, 0.1);
+  
+  // Noise parameters
+  nh_private.param("sigma_sys_x",  sigma_sys_x_, 0.01);
+  nh_private.param("sigma_sys_y",  sigma_sys_y_, 0.01);
+  nh_private.param("sigma_sys_tht",  sigma_sys_tht_, 0.05);
+  nh_private.param("sigma_sys_vel",  sigma_sys_vel_, 0.5);
+  nh_private.param("sigma_sys_omg",  sigma_sys_omg_, 0.5);
+  nh_private.param("sigma_meas_gps_x",  sigma_meas_gps_x_, 0.05);
+  nh_private.param("sigma_meas_gps_y",  sigma_meas_gps_x_, 0.05);
+  nh_private.param("sigma_meas_odom_vR",  sigma_meas_odom_vR_, 0.05);
+  nh_private.param("sigma_meas_odom_vL",  sigma_meas_odom_vL_, 0.05);
+  
+  // Node parameters
+  nh_private.param("debug",   debug_, false);
+  nh_private.param("self_diagnose",  self_diagnose_, false);
 
   ekf_filter_ = new RobotPrecisionEKF(1.0/max(freq,1.0));
 
