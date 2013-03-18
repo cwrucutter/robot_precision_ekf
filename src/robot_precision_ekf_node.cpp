@@ -56,6 +56,10 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   tfb_ = new tf::TransformBroadcaster();
   tf_ = new tf::TransformListener();
 
+  // *****************
+  // GET PARAMETERS
+  // *****************
+
   // General Parameters
   nh_private.param("global_frame_id", global_frame_id_, std::string("map"));
   nh_private.param("odom_frame_id", odom_frame_id_, std::string("odom"));
@@ -63,6 +67,8 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   nh_private.param("sensor_timeout", timeout_, 1.0);
   
   // Filter parameters
+  std::string tmp_filter_type;
+  nh_private.param("filter_type", tmp_filter_type, std::string("ekf_5state"));
   nh_private.param("odom_used", odom_used_, true);
   nh_private.param("imu_used",  imu_used_, true);
   nh_private.param("gps_used",   gps_used_, true);
@@ -86,8 +92,62 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   nh_private.param("debug",   debug_, false);
   nh_private.param("self_diagnose",  self_diagnose_, false);
 
-  ekf_filter_ = new RobotPrecisionEKF(1.0/max(freq,1.0));
+  if(tmp_filter_type == "ekf_5state")
+  {
+    filter_type_ = RobotPrecisionEKF::EKF_5STATE;
+  }
+  else
+  {
+    ROS_WARN("Unknown filter type \"%s\"; defaulting to ekf_5state",
+             tmp_filter_type.c_str());
+    filter_type_ = RobotPrecisionEKF::EKF_5STATE;
+  }
+  
+  
+  // ********************************
+  // INITIALIZE EKF and MEASUREMENTS
+  // ********************************
+   
+  MatrixWrapper::ColumnVector sysNoise(5);
+  sysNoise(1) = pow(sigma_sys_x_,2); // variance = sigma^2
+  sysNoise(2) = pow(sigma_sys_y_,2);
+  sysNoise(3) = pow(sigma_sys_tht_,2);
+  sysNoise(4) = pow(sigma_sys_vel_,2);
+  sysNoise(5) = pow(sigma_sys_omg_,2);
+  sys_covariance_ = sysNoise;
+  
+  // Initialize Filter with desired configuration, dt, and noise
+  ekf_filter_ = new RobotPrecisionEKF(filter_type_, 1.0/max(freq,1.0), sysNoise);
+  
+  // Add odometry measurement
+  if (odom_used_){
+    ColumnVector odomNoise(2);
+    odomNoise(1) = pow(sigma_meas_odom_vR_,2);
+    odomNoise(2) = pow(sigma_meas_odom_vL_,2);
+    odom_covariance_ = odomNoise;
+    if (!ekf_filter_->initMeasOdom(odomNoise))
+      ROS_WARN("Tried to initialize Odometry measurement but failed");
+  }
+  
+  // Add GPS measurement
+  if (gps_used_){
+    ColumnVector gpsNoise(2);
+    gpsNoise(1) = pow(sigma_meas_gps_x_,2);
+    gpsNoise(2) = pow(sigma_meas_gps_y_,2);
+    gps_covariance_ = gpsNoise;
+    if (!ekf_filter_->initMeasGPS(gpsNoise))
+      ROS_WARN("Tried to initialize GPS measurement but failed");
+  }
+  
+  // TODO: Use IMU
+  //imu_initialized_ = ekf_filter_->initMeasIMU();  
+  
 
+  // ********************************
+  // NODE-SPECIFIC INITIALIZATIONS
+  // ********************************
+  
+  // Set timer to desired dt
   timer_ = nh_private.createTimer(ros::Duration(1.0/max(freq,1.0)), &RobotPrecisionEKFNode::spin, this);
   transform_tolerance_.fromSec(tmp_tol);
 
@@ -99,21 +159,21 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
 
   // subscribe to odom messages
   if (odom_used_){
-    ROS_INFO("Odom sensor can be used");
+    ROS_INFO("Odom sensor will be used on topic 'odom'");
     odom_sub_ = nh.subscribe("odom", 10, &RobotPrecisionEKFNode::odomCallback, this);
   }
   else ROS_INFO("Odom sensor will NOT be used");
 
   // subscribe to imu messages
   if (imu_used_){
-    ROS_INFO("Imu sensor can be used");
+    ROS_INFO("Imu sensor will be used on topic 'imu/data'");
     imu_sub_ = nh.subscribe("imu/data", 10,  &RobotPrecisionEKFNode::imuCallback, this);
   }
   else ROS_INFO("Imu sensor will NOT be used");
 
   // subscribe to vo messages
   if (gps_used_){
-    ROS_INFO("VO sensor can be used");
+    ROS_INFO("Gps sensor will be used on topic 'gps_pose'");
     gps_sub_ = nh.subscribe("gps_pose", 10, &RobotPrecisionEKFNode::gpsCallback, this);
   }
   else ROS_INFO("VO sensor will NOT be used");

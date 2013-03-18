@@ -62,8 +62,23 @@
 class RobotPrecisionEKF
 {
 public:
+
+  enum FilterType {
+    EKF_5STATE = 0
+  };
+
   /// constructor
-  RobotPrecisionEKF(double timestep);
+  RobotPrecisionEKF(FilterType type, double timestep, MatrixWrapper::ColumnVector sysNoise);
+  
+  
+  bool initSystem(MatrixWrapper::ColumnVector noiseIn);
+  
+  bool initMeasOdom(MatrixWrapper::ColumnVector noiseIn);
+  
+  bool initMeasGPS(MatrixWrapper::ColumnVector noiseIn);
+  
+  bool initMeasIMU(MatrixWrapper::ColumnVector noiseIn);
+  
   
   void systemUpdate();
   
@@ -79,6 +94,9 @@ public:
   virtual ~RobotPrecisionEKF();
 
 private:
+  FilterType filter_type_;
+  int state_size_;
+
   // pdf / model / filter
   BFL::NonLinearAnalyticConditionalGaussianRobot*          sys_pdf_;
   BFL::AnalyticSystemModelGaussianUncertainty*             sys_model_;
@@ -90,7 +108,7 @@ private:
   //BFL::LinearAnalyticMeasurementModelGaussianUncertainty* imu_meas_model_;
   BFL::Gaussian*                                          prior_;
   BFL::ExtendedKalmanFilter*                              filter_;
-  MatrixWrapper::SymmetricMatrix                          gps_covariance_, odom_covariance_, imu_covariance_;
+  //MatrixWrapper::SymmetricMatrix                          sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
   
   BFL::Pdf<MatrixWrapper::ColumnVector> * posterior_;
 

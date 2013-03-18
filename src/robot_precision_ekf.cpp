@@ -42,108 +42,213 @@ using namespace std;
 using namespace ros;
 
 // constructor
-RobotPrecisionEKF::RobotPrecisionEKF(double timestep):
+RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVector sysNoise):
   prior_(NULL),
   filter_(NULL),
   filter_initialized_(false),
-  gps_initialized_(false),
   odom_initialized_(false),
   imu_initialized_(false),
+  gps_initialized_(false),
   dt_(timestep)
 {
+
+  // Set filter type
+  filter_type_ = type;
+  if (type == EKF_5STATE)
+    state_size_ = 5;
+  else
+  {
+    ROS_WARN("Unknown Filter type. Cannot Initialize EKF");
+    return;
+  }
+  
+  
   /****************************
    * NonLinear system model   *
    ***************************/
 
-  // create gaussian
-  ColumnVector sys_noise_Mu(STATE_SIZE);
-  sys_noise_Mu(1) = MU_SYSTEM_NOISE_X;
-  sys_noise_Mu(2) = MU_SYSTEM_NOISE_Y;
-  sys_noise_Mu(3) = MU_SYSTEM_NOISE_THETA;
-  sys_noise_Mu(4) = MU_SYSTEM_NOISE_VEL;
-  sys_noise_Mu(5) = MU_SYSTEM_NOISE_OMG;
+  // Initialize using the provided system noise!
+  filter_initialized_ = initSystem(sysNoise); // Initializes the system_pdf_, system_model_ and prior_
 
-  SymmetricMatrix sys_Q(STATE_SIZE);
-  sys_Q = 0.0;
-  sys_Q(1,1) = SIGMA_SYSTEM_NOISE_X*dt_; sys_Q(1,2) = 0.0; sys_Q(1,3) = 0.0; sys_Q(1,4) = 0.0; sys_Q(1,5) = 0.0;
-  sys_Q(2,1) = 0.0; sys_Q(2,2) = SIGMA_SYSTEM_NOISE_Y*dt_; sys_Q(2,3) = 0.0; sys_Q(2,4) = 0.0; sys_Q(2,5) = 0.0;
-  sys_Q(3,1) = 0.0; sys_Q(3,2) = 0.0; sys_Q(3,3) = SIGMA_SYSTEM_NOISE_THETA*dt_; sys_Q(3,4) = 0.0; sys_Q(3,5) = 0.0;
-  sys_Q(4,1) = 0.0; sys_Q(4,2) = 0.0; sys_Q(4,3) = 0.0; sys_Q(4,4) = SIGMA_SYSTEM_NOISE_VEL*dt_; sys_Q(4,5) = 0.0;
-  sys_Q(5,1) = 0.0; sys_Q(5,2) = 0.0; sys_Q(5,3) = 0.0; sys_Q(5,4) = 0.0; sys_Q(5,5) = SIGMA_SYSTEM_NOISE_OMG*dt_;
-
-  Gaussian system_Uncertainty(sys_noise_Mu, sys_Q);
-
-  // create the model
-  sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_);
-  sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
 
   /*********************************
    * Initialise measurement models *
    ********************************/
-
-  // XY MEASUREMENT at Arbitrary relationship to origin (nonlinear)
-  // y = [xgps;  = [x + xarm*cos(tht) - yarm*sin(tht); 
-  //      ygps]     y + xarm*sin(tht) + yarm*cos(tht)]
-  // Construct the measurement noise
-  ColumnVector meas_noise_Mu_gps(GPS_MEAS_SIZE);
-  meas_noise_Mu_gps(1) = GPS_MU_MEAS_NOISE_X;
-  meas_noise_Mu_gps(2) = GPS_MU_MEAS_NOISE_Y;
-  SymmetricMatrix meas_R_gps(GPS_MEAS_SIZE);
-  meas_R_gps(1,1) = GPS_SIGMA_MEAS_NOISE_X; meas_R_gps(1,2) = 0.0;
-  meas_R_gps(2,1) = 0.0; meas_R_gps(2,2) = GPS_SIGMA_MEAS_NOISE_Y;
-  Gaussian measurement_Uncertainty_gps(meas_noise_Mu_gps, meas_R_gps);
-
-  // create the measurement model
-  gps_meas_pdf_   = new NonLinearAnalyticConditionalGaussianGPSMeasurement(measurement_Uncertainty_gps);
-  gps_meas_model_ = new AnalyticMeasurementModelGaussianUncertainty(gps_meas_pdf_);
+  /*
+  ColumnVector odomNoise(2);
+  odomNoise(1) = ODOM_SIGMA_MEAS_NOISE_R;
+  odomNoise(2) = ODOM_SIGMA_MEAS_NOISE_L;
+  odom_initialized_ = initMeasEnc(odomNoise);  
   
+  ColumnVector gpsNoise(2);
+  gpsNoise(1) = GPS_SIGMA_MEAS_NOISE_X;
+  gpsNoise(2) = GPS_SIGMA_MEAS_NOISE_Y;
+  gps_initialized_ = initMeasGPS(gpsNoise);
   
-  // ODOMETRY MEASUREMENT MODEL (linear)
-  // y = [vR; = [v+b/2; 
-  //      vL]    v-b/2]
-  Matrix H_odom(ODOM_MEAS_SIZE,STATE_SIZE);
-  H_odom = 0.0; //TODO: Replace the hardcoded track width with the track with from odometry
-  H_odom(1,4) = 1.0; H_odom(1,5) = ODOM_TRACK/2;
-  H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2;
+  // TODO: Use IMU
+  //imu_initialized_ = initMeasIMU();  
+  */
   
-  // Construct the measurement noise
-  ColumnVector meas_noise_Mu_odom(ODOM_MEAS_SIZE);
-  meas_noise_Mu_odom(1) = ODOM_MU_MEAS_NOISE_X;
-  meas_noise_Mu_odom(2) = ODOM_MU_MEAS_NOISE_Y;
-  SymmetricMatrix meas_R_odom(ODOM_MEAS_SIZE);
-  meas_R_odom(1,1) = ODOM_SIGMA_MEAS_NOISE_R; meas_R_odom(1,2) = 0.0;
-  meas_R_odom(2,1) = 0.0; meas_R_odom(2,2) = ODOM_SIGMA_MEAS_NOISE_L;
-  Gaussian measurement_Uncertainty_odom(meas_noise_Mu_odom, meas_R_odom);
-
-  // create the measurement model
-  odom_meas_pdf_   = new LinearAnalyticConditionalGaussian(H_odom, measurement_Uncertainty_odom);
-  odom_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(odom_meas_pdf_);
-
-
-  /****************************
-   * Linear prior DENSITY     *
-   ***************************/
-   // Continuous Gaussian prior (for Kalman filters)
-  ColumnVector prior_Mu(STATE_SIZE);
-  prior_Mu(1) = PRIOR_MU_X;
-  prior_Mu(2) = PRIOR_MU_Y;
-  prior_Mu(3) = PRIOR_MU_THETA;
-  prior_Mu(4) = PRIOR_MU_VEL;
-  prior_Mu(5) = PRIOR_MU_OMG;
-  SymmetricMatrix prior_Cov(STATE_SIZE);
-  prior_Cov(1,1) = PRIOR_COV_X; prior_Cov(1,2) = 0.0; prior_Cov(1,3) = 0.0; prior_Cov(1,4) = 0.0; prior_Cov(1,5) = 0.0;
-  prior_Cov(2,1) = 0.0; prior_Cov(2,2) = PRIOR_COV_Y; prior_Cov(2,3) = 0.0; prior_Cov(2,4) = 0.0; prior_Cov(2,5) = 0.0;
-  prior_Cov(3,1) = 0.0; prior_Cov(3,2) = 0.0; prior_Cov(3,3) = PRIOR_COV_THETA; prior_Cov(3,4) = 0.0; prior_Cov(3,5) = 0.0;
-  prior_Cov(4,1) = 0.0; prior_Cov(4,2) = 0.0; prior_Cov(4,3) = 0.0; prior_Cov(4,4) = PRIOR_COV_VEL; prior_Cov(4,5) = 0.0;
-  prior_Cov(5,1) = 0.0; prior_Cov(5,2) = 0.0; prior_Cov(5,3) = 0.0; prior_Cov(5,4) = 0.0; prior_Cov(5,5) = PRIOR_COV_OMG;
-  prior_  = new Gaussian(prior_Mu,prior_Cov);
-
   /******************************
    * Construction of the Filter *
    ******************************/
-  filter_ = new ExtendedKalmanFilter(prior_);
+  if (filter_initialized_)
+    filter_ = new ExtendedKalmanFilter(prior_);
 
 };
+
+bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
+{
+  // TODO: Verify that noiseIn is the correct size
+  
+  ColumnVector sys_noise_Mu(state_size_);
+  SymmetricMatrix sys_Q(state_size_);
+  sys_Q = 0.0;
+  
+  ColumnVector prior_Mu(state_size_);
+  SymmetricMatrix prior_Cov(state_size_);
+  prior_Cov = 0.0;
+  
+  Gaussian system_Uncertainty;
+  
+  // System depends on the filter type desired
+  switch (filter_type_)
+  {
+    // TODO: Build a new "NonLinearAnalyticConditionalGaussianRobot" for the 3 state and 5 state case
+    // TODO: Implement Iterated EKF or UKF??
+    
+    case RobotPrecisionEKF::EKF_5STATE:
+      sys_noise_Mu(1) = MU_SYSTEM_NOISE_X;
+      sys_noise_Mu(2) = MU_SYSTEM_NOISE_Y;
+      sys_noise_Mu(3) = MU_SYSTEM_NOISE_THETA;
+      sys_noise_Mu(4) = MU_SYSTEM_NOISE_VEL;
+      sys_noise_Mu(5) = MU_SYSTEM_NOISE_OMG;
+
+      sys_Q(1,1) = noiseIn(1)*dt_;
+      sys_Q(2,2) = noiseIn(2)*dt_;
+      sys_Q(3,3) = noiseIn(3)*dt_;
+      sys_Q(4,4) = noiseIn(4)*dt_;
+      sys_Q(5,5) = noiseIn(5)*dt_;
+
+      // Create Gaussian
+      system_Uncertainty.ExpectedValueSet(sys_noise_Mu);
+      system_Uncertainty.CovarianceSet(sys_Q);
+
+      // create the model
+      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_);
+      sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
+      
+      // Continuous Gaussian prior (for Kalman filters)
+      prior_Mu(1) = PRIOR_MU_X; // This is just set to something arbitrary because the 
+      prior_Mu(2) = PRIOR_MU_Y; // filter shold be able to figure it all out. Or something
+      prior_Mu(3) = PRIOR_MU_THETA;
+      prior_Mu(4) = PRIOR_MU_VEL;
+      prior_Mu(5) = PRIOR_MU_OMG;
+      prior_Cov(1,1) = PRIOR_COV_X;
+      prior_Cov(2,2) = PRIOR_COV_Y;
+      prior_Cov(3,3) = PRIOR_COV_THETA;
+      prior_Cov(4,4) = PRIOR_COV_VEL;
+      prior_Cov(5,5) = PRIOR_COV_OMG;
+      prior_  = new Gaussian(prior_Mu,prior_Cov);
+      return true;
+      
+    default:
+      return false;
+  }
+  
+  return false;
+}
+
+bool RobotPrecisionEKF::initMeasOdom(ColumnVector noiseIn)
+{  
+  // TODO: Verify that noiseIn is the correct size
+  
+  Matrix H_odom(ODOM_MEAS_SIZE,state_size_);
+  H_odom = 0.0;
+      
+  ColumnVector meas_noise_Mu_odom(ODOM_MEAS_SIZE);
+  SymmetricMatrix meas_R_odom(ODOM_MEAS_SIZE);
+  meas_R_odom = 0.0;
+  
+  Gaussian measurement_Uncertainty_odom;
+  
+  // Measurement depends on the filter type desired
+  switch (filter_type_)
+  {
+    case RobotPrecisionEKF::EKF_5STATE:
+      // ODOMETRY MEASUREMENT MODEL (linear)
+      // y = [vR; = [v+b/2; 
+      //      vL]    v-b/2]
+    
+      //TODO: Replace the hardcoded track width with the track with from odometry
+      H_odom(1,4) = 1.0; H_odom(1,5) = ODOM_TRACK/2;
+      H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2;
+      
+      // Construct the measurement noise
+      meas_noise_Mu_odom(1) = ODOM_MU_MEAS_NOISE_X;
+      meas_noise_Mu_odom(2) = ODOM_MU_MEAS_NOISE_Y;
+      meas_R_odom(1,1) = noiseIn(1);
+      meas_R_odom(2,2) = noiseIn(2);
+      
+      measurement_Uncertainty_odom.ExpectedValueSet(meas_noise_Mu_odom);
+      measurement_Uncertainty_odom.CovarianceSet(meas_R_odom);
+
+      // create the measurement model
+      odom_meas_pdf_   = new LinearAnalyticConditionalGaussian(H_odom, measurement_Uncertainty_odom);
+      odom_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(odom_meas_pdf_);
+      odom_initialized_ = true;
+      return true;
+      
+    default:
+      return false;
+  }
+  
+  return false;
+}
+
+bool RobotPrecisionEKF::initMeasGPS(ColumnVector noiseIn)
+{
+  // TODO: Verify that noiseIn is the correct size
+  
+  ColumnVector meas_noise_Mu_gps(GPS_MEAS_SIZE);
+  SymmetricMatrix meas_R_gps(GPS_MEAS_SIZE);
+  meas_R_gps = 0.0;
+  
+  Gaussian measurement_Uncertainty_gps;
+  
+  // Measurement depends on the filter type desired
+  switch (filter_type_)
+  {
+    case RobotPrecisionEKF::EKF_5STATE:
+      // XY MEASUREMENT at Arbitrary relationship to origin (nonlinear)
+      // y = [xgps;  = [x + xarm*cos(tht) - yarm*sin(tht); 
+      //      ygps]     y + xarm*sin(tht) + yarm*cos(tht)]
+      // Construct the measurement noise
+      meas_noise_Mu_gps(1) = GPS_MU_MEAS_NOISE_X;
+      meas_noise_Mu_gps(2) = GPS_MU_MEAS_NOISE_Y;
+      meas_R_gps(1,1) = noiseIn(1);
+      meas_R_gps(2,2) = noiseIn(2);
+      measurement_Uncertainty_gps.ExpectedValueSet(meas_noise_Mu_gps);
+      measurement_Uncertainty_gps.CovarianceSet(meas_R_gps);
+
+      // create the measurement model
+      gps_meas_pdf_   = new NonLinearAnalyticConditionalGaussianGPSMeasurement(measurement_Uncertainty_gps);
+      gps_meas_model_ = new AnalyticMeasurementModelGaussianUncertainty(gps_meas_pdf_);
+      gps_initialized_ = true;
+      return true;
+      
+    default:
+      return false;
+  }
+  
+  return false;
+}
+
+bool RobotPrecisionEKF::initMeasIMU(ColumnVector noiseIn)
+{
+  // TODO: Implement IMU measurement
+  return false;
+}
 
 void RobotPrecisionEKF::systemUpdate()
 {

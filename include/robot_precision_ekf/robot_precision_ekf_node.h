@@ -104,6 +104,7 @@ private:
 
   // ekf filter
   RobotPrecisionEKF* ekf_filter_;
+  RobotPrecisionEKF::FilterType filter_type_;
   
   // estimated robot pose message to send
   geometry_msgs::PoseWithCovarianceStamped  output_; 
@@ -134,6 +135,7 @@ private:
   bool odom_used_, imu_used_, gps_used_;
   double timeout_;
   bool debug_, self_diagnose_;
+  MatrixWrapper::ColumnVector sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
   
   // log files for debugging
   std::ofstream odom_file_, imu_file_, gps_file_, corr_file_, time_file_, extra_file_;
