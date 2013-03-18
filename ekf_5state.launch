@@ -12,19 +12,19 @@
     <param name="imu_used" value="true" />
     <param name="gps_used" value="true" />
     <param name="freq" value="10.0" />
-    <param name="transform_tolerance" value="0.1" />
+    <param name="transform_tolerance" value="0.15" />
 
     <!-- Noise parameters -->
     <param name="sigma_sys_x" value="0.01"/>
     <param name="sigma_sys_y" value="0.01"/>
-    <param name="sigma_sys_tht" value="0.05"/>
-    <param name="sigma_sys_vel" value="0.5"/>
-    <param name="sigma_sys_omg" value="0.5"/>
+    <param name="sigma_sys_tht" value="0.1"/>
+    <param name="sigma_sys_vel" value="0.70"/>
+    <param name="sigma_sys_omg" value="0.70"/>
   
-    <param name="sigma_meas_gps_x" value="0.05"/>
-    <param name="sigma_meas_gps_y" value="0.05"/>
-    <param name="sigma_meas_odom_vR" value="0.05"/>
-    <param name="sigma_meas_odom_vL" value="0.05"/>
+    <param name="sigma_meas_gps_x" value="0.03"/>
+    <param name="sigma_meas_gps_y" value="0.03"/>
+    <param name="sigma_meas_odom_alpha" value="0.04"/>
+    <param name="sigma_meas_odom_epsilon" value="0.001"/>
 
     <!-- Other -->
     <param name="debug" value="true"/>

@@ -73,7 +73,10 @@ public:
   
   bool initSystem(MatrixWrapper::ColumnVector noiseIn);
   
-  bool initMeasOdom(MatrixWrapper::ColumnVector noiseIn);
+  // TODO: Abstract the measurements so RobotPrecisionEKF simply calls the initialization
+  //       and other calls for an arbitrary number of sensors which could be defined as
+  //       derived classes/ plugins in the future (??)
+  bool initMeasOdom(double alpha, double epsilon);
   
   bool initMeasGPS(MatrixWrapper::ColumnVector noiseIn);
   
@@ -115,6 +118,7 @@ private:
   // vars
   bool filter_initialized_, odom_initialized_, imu_initialized_, gps_initialized_;
   double dt_;
+  double odom_alpha_, odom_eps_;
   /*MatrixWrapper::ColumnVector vel_desi_, filter_estimate_old_vec_;
   tf::Transform filter_estimate_old_;
   tf::StampedTransform odom_meas_, odom_meas_old_, imu_meas_, imu_meas_old_, gps_meas_, gps_meas_old_;

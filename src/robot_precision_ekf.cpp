@@ -160,14 +160,10 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
   return false;
 }
 
-bool RobotPrecisionEKF::initMeasOdom(ColumnVector noiseIn)
+bool RobotPrecisionEKF::initMeasOdom(double alpha, double epsilon)
 {  
-  if (noiseIn.size() != ODOM_MEAS_SIZE)
-  {
-    ROS_WARN("Odom Initialization failed because supplied \
-        measurement noise does not match odom measurement size");
-    return false;
-  }
+  odom_alpha_ = alpha;
+  odom_eps_ = epsilon;
   
   Matrix H_odom(ODOM_MEAS_SIZE,state_size_);
   H_odom = 0.0;
@@ -193,8 +189,8 @@ bool RobotPrecisionEKF::initMeasOdom(ColumnVector noiseIn)
       // Construct the measurement noise
       meas_noise_Mu_odom(1) = ODOM_MU_MEAS_NOISE_X;
       meas_noise_Mu_odom(2) = ODOM_MU_MEAS_NOISE_Y;
-      meas_R_odom(1,1) = noiseIn(1);
-      meas_R_odom(2,2) = noiseIn(2);
+      meas_R_odom(1,1) = odom_eps_;
+      meas_R_odom(2,2) = odom_eps_;
       
       measurement_Uncertainty_odom.ExpectedValueSet(meas_noise_Mu_odom);
       measurement_Uncertainty_odom.CovarianceSet(meas_R_odom);
@@ -292,6 +288,11 @@ void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
   odom(2) = vL;
   
   // Update
+  MatrixWrapper::SymmetricMatrix odomNoise(ODOM_MEAS_SIZE); // Dynamic odometry noise, based on each wheel vel
+  odomNoise(1,1) = odom_alpha_ * vR * vR + odom_eps_;   //  = vR^2 * alpha  +  epsilon
+  odomNoise(2,2) = odom_alpha_ * vL * vL + odom_eps_;   //  = vL^2 * alpha  +  epsilon
+  odom_meas_pdf_->AdditiveNoiseSigmaSet(odomNoise);
+  odom_meas_model_->MeasurementPdfSet(odom_meas_pdf_); // TODO: Do I really need to Re-set the MeasurementPdf? Or can I just modify that?
   filter_->Update(odom_meas_model_,odom);
   
   // Store posterior

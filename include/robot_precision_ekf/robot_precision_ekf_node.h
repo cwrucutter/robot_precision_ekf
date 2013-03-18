@@ -118,8 +118,8 @@ private:
   double sigma_sys_omg_;
   double sigma_meas_gps_x_;
   double sigma_meas_gps_y_;
-  double sigma_meas_odom_vR_;
-  double sigma_meas_odom_vL_;
+  double sigma_meas_odom_alpha_;
+  double sigma_meas_odom_eps_;
   
   // Transform handlers
   tf::TransformBroadcaster* tfb_;
