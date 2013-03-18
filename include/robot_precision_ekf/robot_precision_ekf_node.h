@@ -52,6 +52,7 @@
 #include "sensor_msgs/Imu.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "robot_precision_ekf/EKFDebug.h"
 
 #include <boost/thread/mutex.hpp>
 
@@ -134,11 +135,13 @@ private:
   ros::Time odom_stamp_, imu_stamp_, gps_stamp_, filter_stamp_;
   bool odom_used_, imu_used_, gps_used_;
   double timeout_;
-  bool debug_, self_diagnose_;
+  bool debug_;
   MatrixWrapper::ColumnVector sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
   
-  // log files for debugging
+  // debugging Stuff
   std::ofstream odom_file_, imu_file_, gps_file_, corr_file_, time_file_, extra_file_;
+  robot_precision_ekf::EKFDebug ekf_debug_;
+  ros::Publisher debug_pub_;
 
   // counters
   unsigned int odom_callback_counter_, imu_callback_counter_, gps_callback_counter_, ekf_sent_counter_;

@@ -90,7 +90,6 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   
   // Node parameters
   nh_private.param("debug",   debug_, false);
-  nh_private.param("self_diagnose",  self_diagnose_, false);
 
   if(tmp_filter_type == "ekf_5state")
   {
@@ -153,6 +152,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
 
   // advertise our estimation
   pose_pub_ = nh_private.advertise<geometry_msgs::PoseWithCovarianceStamped>("ekf_pose", 2);
+  // TODO: Publish the estimated velocity if we want...???
 
   // initialize
   filter_stamp_ = Time::now();
@@ -182,17 +182,17 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   //state_srv_ = nh_private.advertiseService("get_status", &RobotPrecisionEKFNode::getStatus, this);
 
   if (debug_){
+    debug_pub_ = nh_private.advertise<robot_precision_ekf::EKFDebug>("ekf_debug", 2);
     // open files for debugging
-    odom_file_.open("/tmp/odom_file.txt");
-    imu_file_.open("/tmp/imu_file.txt");
-    gps_file_.open("/tmp/gps_file.txt");
-    corr_file_.open("/tmp/corr_file.txt");
-    time_file_.open("/tmp/time_file.txt");
-    extra_file_.open("/tmp/extra_file.txt");
+    // TODO: Use files for debugging/ automated testing
+    //odom_file_.open("/tmp/odom_file.txt");
+    //imu_file_.open("/tmp/imu_file.txt");
+    //gps_file_.open("/tmp/gps_file.txt");
+    //corr_file_.open("/tmp/corr_file.txt");
+    //time_file_.open("/tmp/time_file.txt");
+    //extra_file_.open("/tmp/extra_file.txt");
   }
 };
-
-
 
 
 // destructor
@@ -200,17 +200,14 @@ RobotPrecisionEKFNode::~RobotPrecisionEKFNode(){
 
   if (debug_){
     // close files for debugging
-    odom_file_.close();
-    imu_file_.close();
-    gps_file_.close();
-    corr_file_.close();
-    time_file_.close();
-    extra_file_.close();
+    //odom_file_.close();
+    //imu_file_.close();
+    //gps_file_.close();
+    //corr_file_.close();
+    //time_file_.close();
+    //extra_file_.close();
   }
 };
-
-
-
 
 
 // callback function for odom data
@@ -235,6 +232,12 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   cout << "Encoder Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
+       
+  if (debug_)
+  {
+    ekf_debug_.enc_vel = v;
+    ekf_debug_.enc_omg = w;
+  }
 };
 
 
@@ -257,6 +260,12 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   cout << "GPS Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
+  
+  if (debug_)
+  {
+    ekf_debug_.gps_x = gps->pose.position.x;
+    ekf_debug_.gps_y = gps->pose.position.y;
+  }
   
   // Once the GPS message arrives, publish the updated state!
   publish();
@@ -342,6 +351,24 @@ void RobotPrecisionEKFNode::publish()
                                       transform_expiration,
                                       global_frame_id_, odom_frame_id_);
   this->tfb_->sendTransform(tmp_tf_stamped);
+  
+  // Send the debugging output...
+  if (debug_)
+  {
+    // Send state and diagonal error bars
+    ekf_debug_.ekf_x = mean(1);
+    ekf_debug_.ekf_y = mean(2);
+    ekf_debug_.ekf_tht = mean(3);
+    ekf_debug_.ekf_vel = mean(4);
+    ekf_debug_.ekf_omg = mean(5);
+    ekf_debug_.ekf_err_x = 3*sqrt(cov(1,1));
+    ekf_debug_.ekf_err_y = 3*sqrt(cov(2,2));
+    ekf_debug_.ekf_err_tht = 3*sqrt(cov(3,3));
+    ekf_debug_.ekf_err_vel = 3*sqrt(cov(4,4));
+    ekf_debug_.ekf_err_omg = 3*sqrt(cov(5,5));
+    debug_pub_.publish(ekf_debug_);
+  }
+  
 }
 
 

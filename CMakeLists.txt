@@ -26,7 +26,7 @@ rosbuild_add_executable(robot_precision_ekf
 rosbuild_link_boost(robot_precision_ekf thread)
 
 #uncomment if you have defined messages
-#rosbuild_genmsg()
+rosbuild_genmsg()
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
