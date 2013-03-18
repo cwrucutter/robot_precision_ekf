@@ -20,6 +20,7 @@
 #define __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_ROBOT__
 
 #include <pdf/analyticconditionalgaussian_additivenoise.h>
+#include "ekf_const.h"
 
 namespace BFL
 {
@@ -43,7 +44,7 @@ namespace BFL
           and \f$\mu\f$
           @param additiveNoise Pdf representing the additive Gaussian uncertainty
       */
-      NonLinearAnalyticConditionalGaussianRobot( const Gaussian& additiveNoise, double timestep);
+      NonLinearAnalyticConditionalGaussianRobot( const Gaussian& additiveNoise, double timestep, int numstates);
 
       /// Destructor
       virtual ~NonLinearAnalyticConditionalGaussianRobot();
@@ -55,6 +56,7 @@ namespace BFL
     private:
       mutable MatrixWrapper::Matrix df;
       double dt;
+      int num_states_;
     };
 
 } // End namespace BFL

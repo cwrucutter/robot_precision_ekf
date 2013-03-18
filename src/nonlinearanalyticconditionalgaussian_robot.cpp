@@ -27,14 +27,15 @@ namespace BFL
   using namespace MatrixWrapper;
 
 
-  NonLinearAnalyticConditionalGaussianRobot::NonLinearAnalyticConditionalGaussianRobot(const Gaussian& additiveNoise, double timestep)
+  NonLinearAnalyticConditionalGaussianRobot::NonLinearAnalyticConditionalGaussianRobot(const Gaussian& additiveNoise, double timestep, int numstates)
     : AnalyticConditionalGaussianAdditiveNoise(additiveNoise,NUMCONDARGUMENTS),
-      df(NUMSTATES,NUMSTATES)
+      df(numstates,numstates),
+      num_states_(numstates)
   {
     dt = timestep;
     // initialize df matrix
-    for (unsigned int i=1; i<=NUMSTATES; i++){
-      for (unsigned int j=1; j<=NUMSTATES; j++){
+    for (unsigned int i=1; i<=num_states_; i++){
+      for (unsigned int j=1; j<=num_states_; j++){
         if (i==j) df(i,j) = 1;
         else df(i,j) = 0;
       }
@@ -46,44 +47,96 @@ namespace BFL
 
   ColumnVector NonLinearAnalyticConditionalGaussianRobot::ExpectedValueGet() const
   {
-    ColumnVector state = ConditionalArgumentGet(0);
-    // f(x) for a mobile robot, where x = [x;y;tht;vel;omg]
-    double tht_mid = state(3)+state(5)*dt/2; // Theta mid-pt = Thtold + w*dt/2
-    state(1) = state(1) + state(4)*dt*cos(tht_mid);
-    state(2) = state(2) + state(4)*dt*sin(tht_mid);
-    state(3) = angles::normalize_angle(state(3) + state(5)*dt);
-    state(4) = state(4);
-    state(5) = state(5);
-    return state + AdditiveNoiseMuGet();
+    double v,w,tht_mid;
+    ColumnVector state, input;
+    
+    if (num_states_ == 5)
+    {
+      // f(x) for a mobile robot, where x = [x;y;tht;vel;omg]
+      state = ConditionalArgumentGet(0);
+      tht_mid = state(3)+state(5)*dt/2; // Theta mid-pt = Thtold + w*dt/2
+      state(1) = state(1) + state(4)*dt*cos(tht_mid);
+      state(2) = state(2) + state(4)*dt*sin(tht_mid);
+      state(3) = angles::normalize_angle(state(3) + state(5)*dt);
+      state(4) = state(4);
+      state(5) = state(5);
+      return state + AdditiveNoiseMuGet();
+    }
+    else if (num_states_ == 3)
+    {
+      // f(x,u) for a mobile robot, where x = [x;y;tht]
+      // and u = [vR;vL]
+      state = ConditionalArgumentGet(0);
+      input = ConditionalArgumentGet(1);
+      v = (input(1)+input(2))/2;
+      w = (input(1)-input(2))/ODOM_TRACK;
+      double tht_mid = state(3)+w*dt/2; // Theta mid-pt = Thtold + w*dt/2
+      state(1) = state(1) + v*dt*cos(tht_mid);
+      state(2) = state(2) + v*dt*sin(tht_mid);
+      state(3) = angles::normalize_angle(state(3) + w*dt);
+      return state + AdditiveNoiseMuGet();
+    }
+    else
+    {
+      cerr << "Number of States: " << num_states_ << " is invalid\n";
+      exit(-BFL_ERRMISUSE);
+    }
+    
   }
 
   Matrix NonLinearAnalyticConditionalGaussianRobot::dfGet(unsigned int i) const
   {
+    double v,w,tht_mid;
+    ColumnVector state, input;
+    
     if (i==0)//derivative to the first conditional argument (x)
     {
-      // Jacobian F = df(x)/dx for a mobile robot, where x = [x;y;tht;vel;omg]
-      ColumnVector state = ConditionalArgumentGet(0);
-      
-      double tht_mid = state(3)+state(5)*dt/2; // Theta mid-pt = Thtold + w*dt/2
-      
-      df(1,1) = 1.0;
-      df(1,3) = -state(4)*dt*sin(tht_mid);
-      df(1,4) = dt*cos(tht_mid);
-      df(1,5) = -state(4)*dt*dt/2*sin(tht_mid);
-      
-      df(2,2) = 1.0;
-      df(2,3) = state(4)*dt*cos(tht_mid);
-      df(2,4) = dt*sin(tht_mid);
-      df(2,5) = state(4)*dt*dt/2*cos(tht_mid);
-      
-      df(3,3) = 1.0;
-      df(3,5) = dt;
-      
-      df(4,4) = 1.0;
-      
-      df(5,5) = 1.0;
+      if (num_states_ == 5)
+      {
+        // Jacobian F = df(x)/dx for a mobile robot, where x = [x;y;tht;vel;omg]
+        state = ConditionalArgumentGet(0);
+        tht_mid = state(3)+state(5)*dt/2; // Theta mid-pt = Thtold + w*dt/2
+        
+        df(1,1) = 1.0;
+        df(1,3) = -state(4)*dt*sin(tht_mid);
+        df(1,4) = dt*cos(tht_mid);
+        df(1,5) = -state(4)*dt*dt/2*sin(tht_mid);
+        
+        df(2,2) = 1.0;
+        df(2,3) = state(4)*dt*cos(tht_mid);
+        df(2,4) = dt*sin(tht_mid);
+        df(2,5) = state(4)*dt*dt/2*cos(tht_mid);
+        
+        df(3,3) = 1.0;
+        df(3,5) = dt;
+        
+        df(4,4) = 1.0;
+        
+        df(5,5) = 1.0;
 
-      return df;
+        return df;
+      }
+      else if (num_states_ == 3)
+      {        
+        // Jacobian F = df(x,u)/dx for a mobile robot, where x = [x;y;tht] and u = [vR;vL]
+        state = ConditionalArgumentGet(0);
+        v = (input(1)+input(2))/2;
+        w = (input(1)-input(2))/ODOM_TRACK;
+        double tht_mid = state(3)+w*dt/2; // Theta mid-pt = Thtold + w*dt/2
+        
+        df(1,1) = 1.0;
+        df(1,3) = -v*dt*sin(tht_mid);
+        
+        df(2,2) = 1.0;
+        df(2,3) = v*dt*cos(tht_mid);
+        
+        df(3,3) = 1.0;      
+      }
+      else
+      {
+        cerr << "Number of States: " << num_states_ << " is invalid\n";
+        exit(-BFL_ERRMISUSE);      
+      }
     }
     else
     {

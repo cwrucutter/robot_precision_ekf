@@ -136,7 +136,7 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       system_Uncertainty.CovarianceSet(sys_Q);
 
       // create the model
-      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_);
+      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_, 5);
       sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
       
       // Continuous Gaussian prior (for Kalman filters)
@@ -259,6 +259,8 @@ bool RobotPrecisionEKF::initMeasIMU(ColumnVector noiseIn)
 
 void RobotPrecisionEKF::systemUpdate()
 {
+  // TODO: Set the system noise dependent on the input, if the input is specified!!
+ 
   // System update
   filter_->Update(sys_model_);
   

@@ -23,7 +23,7 @@
   
     <param name="sigma_meas_gps_x" value="0.03"/>
     <param name="sigma_meas_gps_y" value="0.03"/>
-    <param name="sigma_meas_odom_alpha" value="0.04"/>
+    <param name="sigma_meas_odom_alpha" value="0.040"/>
     <param name="sigma_meas_odom_epsilon" value="0.001"/>
 
     <!-- Other -->
