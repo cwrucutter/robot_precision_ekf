@@ -51,26 +51,26 @@
 #define MU_SYSTEM_NOISE_THETA 0.0
 #define MU_SYSTEM_NOISE_VEL 0.0
 #define MU_SYSTEM_NOISE_OMG 0.0
-#define SIGMA_SYSTEM_NOISE_X pow(0.01,2)
-#define SIGMA_SYSTEM_NOISE_Y pow(0.01,2)
-#define SIGMA_SYSTEM_NOISE_THT pow(2*M_PI/180,2)
-#define SIGMA_SYSTEM_NOISE_VEL pow(0.5,2)
-#define SIGMA_SYSTEM_NOISE_OMG pow(0.5,2)
+//#define SIGMA_SYSTEM_NOISE_X pow(0.01,2)
+//#define SIGMA_SYSTEM_NOISE_Y pow(0.01,2)
+//#define SIGMA_SYSTEM_NOISE_THT pow(2*M_PI/180,2)
+//#define SIGMA_SYSTEM_NOISE_VEL pow(0.5,2)
+//#define SIGMA_SYSTEM_NOISE_OMG pow(0.5,2)
 
 // GPS Measurement
 #define GPS_LEVERARM_X -0.45 // TODO: Pull the leverarm from the base_link->base_gps transform
 #define GPS_LEVERARM_Y 0.0
 #define GPS_MEAS_SIZE 2  //Measurement: [x; y]
-#define GPS_SIGMA_MEAS_NOISE_X pow(0.05,2)
-#define GPS_SIGMA_MEAS_NOISE_Y pow(0.05,2)
+//#define GPS_SIGMA_MEAS_NOISE_X pow(0.05,2)
+//#define GPS_SIGMA_MEAS_NOISE_Y pow(0.05,2)
 #define GPS_MU_MEAS_NOISE_X 0.0
 #define GPS_MU_MEAS_NOISE_Y 0.0
 
 // Odometry measurement
 #define ODOM_TRACK 0.55 // TODO: Pull the track from the odometry parameter server
 #define ODOM_MEAS_SIZE 2  //Measurement: [vR; vL]
-#define ODOM_SIGMA_MEAS_NOISE_R pow(0.05,2)
-#define ODOM_SIGMA_MEAS_NOISE_L pow(0.05,2)
+//#define ODOM_SIGMA_MEAS_NOISE_R pow(0.05,2)
+//#define ODOM_SIGMA_MEAS_NOISE_L pow(0.05,2)
 #define ODOM_MU_MEAS_NOISE_X 0.0
 #define ODOM_MU_MEAS_NOISE_Y 0.0
 

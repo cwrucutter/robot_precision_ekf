@@ -51,8 +51,11 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
   gps_initialized_(false),
   dt_(timestep)
 {
-
-  // Set filter type
+ 
+  /*********************
+   * SET FILTER TYPE   *
+   ********************/
+   
   filter_type_ = type;
   if (type == EKF_5STATE)
     state_size_ = 5;
@@ -72,22 +75,14 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
 
 
   /*********************************
-   * Initialise measurement models *
+   * Initialize measurement models *
    ********************************/
-  /*
-  ColumnVector odomNoise(2);
-  odomNoise(1) = ODOM_SIGMA_MEAS_NOISE_R;
-  odomNoise(2) = ODOM_SIGMA_MEAS_NOISE_L;
-  odom_initialized_ = initMeasEnc(odomNoise);  
-  
-  ColumnVector gpsNoise(2);
-  gpsNoise(1) = GPS_SIGMA_MEAS_NOISE_X;
-  gpsNoise(2) = GPS_SIGMA_MEAS_NOISE_Y;
-  gps_initialized_ = initMeasGPS(gpsNoise);
-  
-  // TODO: Use IMU
-  //imu_initialized_ = initMeasIMU();  
-  */
+   
+  // Do NOT initialize measurement models here.
+  // Nodes implementing this class must explicitly call the 
+  //   functions: initMeasEnc, initMeasGPS, and initMeasIMU
+  //   in order to initialize the measurement models with 
+  //   desired noise values
   
   /******************************
    * Construction of the Filter *
@@ -100,6 +95,12 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
 bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
 {
   // TODO: Verify that noiseIn is the correct size
+  if (noiseIn.size() < state_size_)
+  {
+    ROS_WARN("RobotPrecisionEKF::initSystem failed because \
+        supplied system noise does not include enough terms");
+    return false;
+  }
   
   ColumnVector sys_noise_Mu(state_size_);
   SymmetricMatrix sys_Q(state_size_);
@@ -161,7 +162,12 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
 
 bool RobotPrecisionEKF::initMeasOdom(ColumnVector noiseIn)
 {  
-  // TODO: Verify that noiseIn is the correct size
+  if (noiseIn.size() != ODOM_MEAS_SIZE)
+  {
+    ROS_WARN("Odom Initialization failed because supplied \
+        measurement noise does not match odom measurement size");
+    return false;
+  }
   
   Matrix H_odom(ODOM_MEAS_SIZE,state_size_);
   H_odom = 0.0;
@@ -208,7 +214,12 @@ bool RobotPrecisionEKF::initMeasOdom(ColumnVector noiseIn)
 
 bool RobotPrecisionEKF::initMeasGPS(ColumnVector noiseIn)
 {
-  // TODO: Verify that noiseIn is the correct size
+  if (noiseIn.size() != GPS_MEAS_SIZE)
+  {
+    ROS_WARN("GPS initialization failed because supplied \
+        measurement noise does not match GPS measurement size");
+    return false;
+  }
   
   ColumnVector meas_noise_Mu_gps(GPS_MEAS_SIZE);
   SymmetricMatrix meas_R_gps(GPS_MEAS_SIZE);
