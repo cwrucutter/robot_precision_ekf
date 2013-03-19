@@ -16,8 +16,8 @@
 //  
 
 
-#ifndef __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_ROBOT__
-#define __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_ROBOT__
+#ifndef __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_3STATE__
+#define __NON_LINEAR_SYSTEM_CONDITIONAL_GAUSSIAN_3STATE__
 
 #include <pdf/analyticconditionalgaussian_additivenoise.h>
 #include "ekf_const.h"
@@ -30,8 +30,10 @@ namespace BFL
      Matrix[2]. ConditionalArguments[1]  + ... + Noise.\mu \f$
      - Covariance is independent of the ConditionalArguments, and is
      the covariance of the Noise pdf
+     - *** Actually, in this case the Covariance is DEPENDENT on the conditional
+       arguments... Yay! Sorry. I shouldnt use the "AdditiveNoise" version, I know. 
   */
-  class NonLinearAnalyticConditionalGaussianRobot : public AnalyticConditionalGaussianAdditiveNoise
+  class NonLinearAnalyticConditionalGaussian3State : public AnalyticConditionalGaussianAdditiveNoise
   {
     public:
       /// Constructor
@@ -44,18 +46,25 @@ namespace BFL
           and \f$\mu\f$
           @param additiveNoise Pdf representing the additive Gaussian uncertainty
       */
-      NonLinearAnalyticConditionalGaussianRobot( const Gaussian& additiveNoise, double timestep);
+      NonLinearAnalyticConditionalGaussian3State( const Gaussian& additiveNoise, double timestep);
 
       /// Destructor
-      virtual ~NonLinearAnalyticConditionalGaussianRobot();
+      virtual ~NonLinearAnalyticConditionalGaussian3State();
 
       // redefine virtual functions
       virtual MatrixWrapper::ColumnVector    ExpectedValueGet() const;
       virtual MatrixWrapper::Matrix          dfGet(unsigned int i)       const;
+      virtual MatrixWrapper::SymmetricMatrix CovarianceGet() const;
+      
+      // Function to set the noise parameters
+      void setOdomNoise(double alpha, double epsilon);
 
     private:
       mutable MatrixWrapper::Matrix df;
-      double dt;;
+      mutable MatrixWrapper::Matrix du;
+      double dt;
+      double alpha_;
+      double epsilon_;
     };
 
 } // End namespace BFL

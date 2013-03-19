@@ -41,6 +41,9 @@ using namespace tf;
 using namespace std;
 using namespace ros;
 
+typedef NonLinearAnalyticConditionalGaussianRobot  RobotPdf5State;
+typedef NonLinearAnalyticConditionalGaussian3State RobotPdf3State;
+
 // constructor
 RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVector sysNoise):
   prior_(NULL),
@@ -137,7 +140,7 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       system_Uncertainty.CovarianceSet(sys_Q);
 
       // create the model
-      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_, 5, 1);
+      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_);
       sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
       
       // Continuous Gaussian prior (for Kalman filters)
@@ -169,7 +172,7 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       system_Uncertainty.CovarianceSet(sys_Q);
 
       // create the model
-      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_, 3, 2);
+      sys_pdf_ = new NonLinearAnalyticConditionalGaussian3State(system_Uncertainty, dt_);
       sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
       
       // Continuous Gaussian prior (for Kalman filters)
@@ -211,7 +214,7 @@ bool RobotPrecisionEKF::initMeasOdom(double alpha, double epsilon)
       // y = [vR; = [v+b/2; 
       //      vL]    v-b/2]
     
-      //TODO: Replace the hardcoded track width with the track with from odometry
+      //TODO: Replace the hardcoded track width with the track from odometry parameter
       H_odom(1,4) = 1.0; H_odom(1,5) = ODOM_TRACK/2;
       H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2;
       
@@ -232,7 +235,16 @@ bool RobotPrecisionEKF::initMeasOdom(double alpha, double epsilon)
       
     case RobotPrecisionEKF::EKF_3STATE:
       // Odometry is handled as an input! Not a measurement
-      return false;
+      try
+      {
+        dynamic_cast<NonLinearAnalyticConditionalGaussian3State *>(sys_pdf_)->setOdomNoise(odom_alpha_,odom_eps_);
+      }
+      catch (std::bad_cast err)
+      {
+        ROS_ERROR("Odometry Initialization Failed for 3-State EKF");
+        return false;
+      }
+      return true;
       
     default:
       return false;

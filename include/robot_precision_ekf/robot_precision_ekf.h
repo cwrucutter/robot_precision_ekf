@@ -46,6 +46,7 @@
 #include <pdf/analyticconditionalgaussian.h>
 #include <pdf/linearanalyticconditionalgaussian.h>
 #include "nonlinearanalyticconditionalgaussian_robot.h"
+#include "nonlinearanalyticconditionalgaussian_3state.h"
 #include "nonlinearanalyticconditionalgaussian_gpsmeasurement.h"
 
 #include "ekf_const.h"
@@ -102,7 +103,8 @@ private:
   int state_size_;
 
   // pdf / model / filter
-  BFL::NonLinearAnalyticConditionalGaussianRobot*          sys_pdf_;
+  //BFL::NonLinearAnalyticConditionalGaussianRobot*          sys_pdf_;
+  BFL::AnalyticConditionalGaussianAdditiveNoise*           sys_pdf_;
   BFL::AnalyticSystemModelGaussianUncertainty*             sys_model_;
   BFL::NonLinearAnalyticConditionalGaussianGPSMeasurement* gps_meas_pdf_;
   BFL::AnalyticMeasurementModelGaussianUncertainty*        gps_meas_model_;

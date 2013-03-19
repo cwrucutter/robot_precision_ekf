@@ -86,7 +86,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   nh_private.param("sigma_meas_gps_x",  sigma_meas_gps_x_, 0.05);
   nh_private.param("sigma_meas_gps_y",  sigma_meas_gps_x_, 0.05);
   nh_private.param("sigma_meas_odom_alpha",  sigma_meas_odom_alpha_, 0.01);
-  nh_private.param("sigma_meas_odom_eps",  sigma_meas_odom_eps_, 0.0001);
+  nh_private.param("sigma_meas_odom_epsilon",  sigma_meas_odom_eps_, 0.0001);
   
   // Node parameters
   nh_private.param("debug",   debug_, false);
@@ -125,7 +125,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   ekf_filter_ = new RobotPrecisionEKF(filter_type_, 1.0/max(freq,1.0), sysNoise);
   
   // Add odometry measurement
-  if (odom_used_ && (filter_type_ == RobotPrecisionEKF::EKF_5STATE)){
+  if (odom_used_){
     if (!ekf_filter_->initMeasOdom(sigma_meas_odom_alpha_, sigma_meas_odom_eps_))
       ROS_WARN("Tried to initialize Odometry measurement but failed");
   }
