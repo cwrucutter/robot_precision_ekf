@@ -19,19 +19,21 @@
 #include <wrappers/rng/rng.h> // Wrapper around several rng
                               // libraries
 #include "angles/angles.h"
-#define NUMCONDARGUMENTS 1
-#define NUMSTATES 5
+//#define NUMCONDARGUMENTS 1
+//#define NUMSTATES 5
 
 namespace BFL
 {
   using namespace MatrixWrapper;
 
 
-  NonLinearAnalyticConditionalGaussianRobot::NonLinearAnalyticConditionalGaussianRobot(const Gaussian& additiveNoise, double timestep, int numstates)
-    : AnalyticConditionalGaussianAdditiveNoise(additiveNoise,NUMCONDARGUMENTS),
+  NonLinearAnalyticConditionalGaussianRobot::NonLinearAnalyticConditionalGaussianRobot(const Gaussian& additiveNoise, double timestep, int numstates, int numcondarguments)
+    : AnalyticConditionalGaussianAdditiveNoise(additiveNoise,numcondarguments),
       df(numstates,numstates),
-      num_states_(numstates)
-  {
+      du(numstates,2),
+      num_states_(numstates),
+      num_cond_args_(numcondarguments)
+  {    
     dt = timestep;
     // initialize df matrix
     for (unsigned int i=1; i<=num_states_; i++){
@@ -78,8 +80,8 @@ namespace BFL
     }
     else
     {
-      cerr << "Number of States: " << num_states_ << " is invalid\n";
-      exit(-BFL_ERRMISUSE);
+      cerr << "Number of states: " << num_states_ << " is invalid\n";
+      exit(-BFL_ERRMISUSE); 
     }
     
   }
@@ -89,8 +91,9 @@ namespace BFL
     double v,w,tht_mid;
     ColumnVector state, input;
     
-    if (i==0)//derivative to the first conditional argument (x)
+    if (i==0)
     {
+      //derivative to the first conditional argument (x)
       if (num_states_ == 5)
       {
         // Jacobian F = df(x)/dx for a mobile robot, where x = [x;y;tht;vel;omg]
@@ -120,9 +123,10 @@ namespace BFL
       {        
         // Jacobian F = df(x,u)/dx for a mobile robot, where x = [x;y;tht] and u = [vR;vL]
         state = ConditionalArgumentGet(0);
+        input = ConditionalArgumentGet(1);
         v = (input(1)+input(2))/2;
         w = (input(1)-input(2))/ODOM_TRACK;
-        double tht_mid = state(3)+w*dt/2; // Theta mid-pt = Thtold + w*dt/2
+        tht_mid = state(3)+w*dt/2; // Theta mid-pt = Thtold + w*dt/2
         
         df(1,1) = 1.0;
         df(1,3) = -v*dt*sin(tht_mid);
@@ -130,12 +134,42 @@ namespace BFL
         df(2,2) = 1.0;
         df(2,3) = v*dt*cos(tht_mid);
         
-        df(3,3) = 1.0;      
+        df(3,3) = 1.0;  
+        return df;    
       }
       else
       {
-        cerr << "Number of States: " << num_states_ << " is invalid\n";
-        exit(-BFL_ERRMISUSE);      
+        cerr << "Number of states: " << num_states_ << " is invalid\n";
+        exit(-BFL_ERRMISUSE);     
+      }
+    }
+    else if (i == 1 and (num_cond_args_ > 1)) 
+    {
+      //derivative to the second conditional argument (u)
+      cout << "Getting derivative of the inputs\n";
+      if (num_states_ == 3)
+      {        
+        // Jacobian F = df(x,u)/dx for a mobile robot, where x = [x;y;tht] and u = [vR;vL]
+        state = ConditionalArgumentGet(0);
+        input = ConditionalArgumentGet(1);
+        v = (input(1)+input(2))/2;
+        w = (input(1)-input(2))/ODOM_TRACK;
+        tht_mid = state(3)+w*dt/2; // Theta mid-pt = Thtold + w*dt/2
+        
+        du(1,1) = 0.5*cos(tht_mid)-v*dt/(2.0*ODOM_TRACK)*sin(tht_mid);
+        du(1,2) = 0.5*cos(tht_mid)+v*dt/(2.0*ODOM_TRACK)*sin(tht_mid);
+        
+        du(2,1) = 0.5*sin(tht_mid)+v*dt/(2.0*ODOM_TRACK)*cos(tht_mid);
+        du(2,2) = 0.5*sin(tht_mid)-v*dt/(2.0*ODOM_TRACK)*cos(tht_mid);
+        
+        du(3,1) =  1.0/ODOM_TRACK;
+        du(3,2) = -1.0/ODOM_TRACK;
+        return du;
+      }
+      else
+      {
+        cerr << "Number of states: " << num_states_ << " is invalid\n";
+        exit(-BFL_ERRMISUSE);   
       }
     }
     else

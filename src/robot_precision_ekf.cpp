@@ -57,14 +57,15 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
    ********************/
    
   filter_type_ = type;
-  if (type == EKF_5STATE)
+  if (filter_type_ == EKF_5STATE)
     state_size_ = 5;
+  else if (filter_type_ == RobotPrecisionEKF::EKF_3STATE_INPUTS)
+    state_size_ = 3;
   else
   {
     ROS_WARN("Unknown Filter type. Cannot Initialize EKF");
     return;
   }
-  
   
   /****************************
    * NonLinear system model   *
@@ -72,8 +73,7 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
 
   // Initialize using the provided system noise!
   filter_initialized_ = initSystem(sysNoise); // Initializes the system_pdf_, system_model_ and prior_
-
-
+  
   /*********************************
    * Initialize measurement models *
    ********************************/
@@ -136,7 +136,39 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       system_Uncertainty.CovarianceSet(sys_Q);
 
       // create the model
-      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_, 5);
+      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_, 5, 1);
+      sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
+      
+      // Continuous Gaussian prior (for Kalman filters)
+      prior_Mu(1) = PRIOR_MU_X; // This is just set to something arbitrary because the 
+      prior_Mu(2) = PRIOR_MU_Y; // filter shold be able to figure it all out. Or something
+      prior_Mu(3) = PRIOR_MU_THETA;
+      prior_Mu(4) = PRIOR_MU_VEL;
+      prior_Mu(5) = PRIOR_MU_OMG;
+      prior_Cov(1,1) = PRIOR_COV_X;
+      prior_Cov(2,2) = PRIOR_COV_Y;
+      prior_Cov(3,3) = PRIOR_COV_THETA;
+      prior_Cov(4,4) = PRIOR_COV_VEL;
+      prior_Cov(5,5) = PRIOR_COV_OMG;
+      prior_  = new Gaussian(prior_Mu,prior_Cov);
+      return true;
+      
+    case RobotPrecisionEKF::EKF_3STATE_INPUTS:
+      sys_noise_Mu(1) = MU_SYSTEM_NOISE_X;
+      sys_noise_Mu(2) = MU_SYSTEM_NOISE_Y;
+      sys_noise_Mu(3) = MU_SYSTEM_NOISE_THETA;
+
+      sys_Q(1,1) = noiseIn(1)*dt_;
+      sys_Q(2,2) = noiseIn(2)*dt_;
+      sys_Q(3,3) = noiseIn(3)*dt_;
+      sys_covariance_ = sys_Q;
+
+      // Create Gaussian
+      system_Uncertainty.ExpectedValueSet(sys_noise_Mu);
+      system_Uncertainty.CovarianceSet(sys_Q);
+
+      // create the model
+      sys_pdf_ = new NonLinearAnalyticConditionalGaussianRobot(system_Uncertainty, dt_, 3, 2);
       sys_model_ = new AnalyticSystemModelGaussianUncertainty(sys_pdf_);
       
       // Continuous Gaussian prior (for Kalman filters)
@@ -201,6 +233,10 @@ bool RobotPrecisionEKF::initMeasOdom(double alpha, double epsilon)
       odom_initialized_ = true;
       return true;
       
+    case RobotPrecisionEKF::EKF_3STATE_INPUTS:
+      // Odometry is handled as an input! Not a measurement
+      return false;
+      
     default:
       return false;
   }
@@ -227,6 +263,7 @@ bool RobotPrecisionEKF::initMeasGPS(ColumnVector noiseIn)
   switch (filter_type_)
   {
     case RobotPrecisionEKF::EKF_5STATE:
+    case RobotPrecisionEKF::EKF_3STATE_INPUTS:
       // XY MEASUREMENT at Arbitrary relationship to origin (nonlinear)
       // y = [xgps;  = [x + xarm*cos(tht) - yarm*sin(tht); 
       //      ygps]     y + xarm*sin(tht) + yarm*cos(tht)]
@@ -251,21 +288,30 @@ bool RobotPrecisionEKF::initMeasGPS(ColumnVector noiseIn)
   return false;
 }
 
+
+void RobotPrecisionEKF::systemUpdate()
+{
+ 
+  // System update
+  if (filter_type_ == EKF_5STATE)
+  {
+    filter_->Update(sys_model_);
+  }
+  else if (filter_type_ == EKF_3STATE_INPUTS)
+  {
+    //TODO: How to propagate the input noise correctly????
+    filter_->Update(sys_model_,inputs_);
+    new_input_ = false;
+  }
+  
+  // Store posterior
+  posterior_ = filter_->PostGet();
+}
+
 bool RobotPrecisionEKF::initMeasIMU(ColumnVector noiseIn)
 {
   // TODO: Implement IMU measurement
   return false;
-}
-
-void RobotPrecisionEKF::systemUpdate()
-{
-  // TODO: Set the system noise dependent on the input, if the input is specified!!
- 
-  // System update
-  filter_->Update(sys_model_);
-  
-  // Store posterior
-  posterior_ = filter_->PostGet();
 }
 
 void RobotPrecisionEKF::measurementUpdateGPS(double x, double y)
@@ -284,21 +330,33 @@ void RobotPrecisionEKF::measurementUpdateGPS(double x, double y)
 
 void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
 {
-  //Prepare measurement
-  ColumnVector odom(ODOM_MEAS_SIZE);
-  odom(1) = vR;
-  odom(2) = vL;
-  
-  // Update
-  MatrixWrapper::SymmetricMatrix odomNoise(ODOM_MEAS_SIZE); // Dynamic odometry noise, based on each wheel vel
-  odomNoise(1,1) = odom_alpha_ * vR * vR + odom_eps_;   //  = vR^2 * alpha  +  epsilon
-  odomNoise(2,2) = odom_alpha_ * vL * vL + odom_eps_;   //  = vL^2 * alpha  +  epsilon
-  odom_meas_pdf_->AdditiveNoiseSigmaSet(odomNoise);
-  odom_meas_model_->MeasurementPdfSet(odom_meas_pdf_); // TODO: Do I really need to Re-set the MeasurementPdf? Or can I just modify that?
-  filter_->Update(odom_meas_model_,odom);
-  
-  // Store posterior
-  posterior_ = filter_->PostGet();
+  if (filter_type_ == EKF_5STATE)
+  {
+    //Prepare measurement
+    ColumnVector odom(ODOM_MEAS_SIZE);
+    odom(1) = vR;
+    odom(2) = vL;
+    
+    // Update
+    MatrixWrapper::SymmetricMatrix odomNoise(ODOM_MEAS_SIZE); // Dynamic odometry noise, based on each wheel vel
+    odomNoise(1,1) = odom_alpha_ * vR * vR + odom_eps_;   //  = vR^2 * alpha  +  epsilon
+    odomNoise(2,2) = odom_alpha_ * vL * vL + odom_eps_;   //  = vL^2 * alpha  +  epsilon
+    odom_meas_pdf_->AdditiveNoiseSigmaSet(odomNoise);
+    odom_meas_model_->MeasurementPdfSet(odom_meas_pdf_); // TODO: Do I really need to Re-set the MeasurementPdf? Or can I just modify that?
+    filter_->Update(odom_meas_model_,odom);
+    
+    // Store posterior
+    posterior_ = filter_->PostGet();
+  }
+  else
+  {
+    // Store the odometry to use during the next system update
+    ColumnVector odomIn(2);
+    odomIn(1) = vR;
+    odomIn(2) = vL;
+    inputs_ = odomIn;
+    bool new_input_ = true;
+  }
 }
 
 

@@ -64,7 +64,8 @@ class RobotPrecisionEKF
 public:
 
   enum FilterType {
-    EKF_5STATE = 0
+    EKF_5STATE = 0,
+    EKF_3STATE_INPUTS
   };
 
   /// constructor
@@ -111,7 +112,8 @@ private:
   //BFL::LinearAnalyticMeasurementModelGaussianUncertainty* imu_meas_model_;
   BFL::Gaussian*                                          prior_;
   BFL::ExtendedKalmanFilter*                              filter_;
-  //MatrixWrapper::SymmetricMatrix                          sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
+  MatrixWrapper::SymmetricMatrix                          sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
+  MatrixWrapper::ColumnVector                             inputs_;
   
   BFL::Pdf<MatrixWrapper::ColumnVector> * posterior_;
 
@@ -119,6 +121,7 @@ private:
   bool filter_initialized_, odom_initialized_, imu_initialized_, gps_initialized_;
   double dt_;
   double odom_alpha_, odom_eps_;
+  bool new_input_;
   /*MatrixWrapper::ColumnVector vel_desi_, filter_estimate_old_vec_;
   tf::Transform filter_estimate_old_;
   tf::StampedTransform odom_meas_, odom_meas_old_, imu_meas_, imu_meas_old_, gps_meas_, gps_meas_old_;

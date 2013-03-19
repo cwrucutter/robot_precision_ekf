@@ -44,7 +44,7 @@ namespace BFL
           and \f$\mu\f$
           @param additiveNoise Pdf representing the additive Gaussian uncertainty
       */
-      NonLinearAnalyticConditionalGaussianRobot( const Gaussian& additiveNoise, double timestep, int numstates);
+      NonLinearAnalyticConditionalGaussianRobot( const Gaussian& additiveNoise, double timestep, int numstates, int numcondarguments);
 
       /// Destructor
       virtual ~NonLinearAnalyticConditionalGaussianRobot();
@@ -55,8 +55,10 @@ namespace BFL
 
     private:
       mutable MatrixWrapper::Matrix df;
+      mutable MatrixWrapper::Matrix du;
       double dt;
       int num_states_;
+      int num_cond_args_;
     };
 
 } // End namespace BFL
