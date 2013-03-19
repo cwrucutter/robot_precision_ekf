@@ -65,7 +65,7 @@ public:
 
   enum FilterType {
     EKF_5STATE = 0,
-    EKF_3STATE_INPUTS
+    EKF_3STATE
   };
 
   /// constructor

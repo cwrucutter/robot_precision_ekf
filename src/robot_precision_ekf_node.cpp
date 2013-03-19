@@ -93,7 +93,13 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
 
   if(tmp_filter_type == "ekf_5state")
   {
+    ROS_INFO("Setting filter type to: %s", tmp_filter_type.c_str());
     filter_type_ = RobotPrecisionEKF::EKF_5STATE;
+  }
+  else if(tmp_filter_type == "ekf_3state")
+  {
+    ROS_INFO("Setting filter type to: %s", tmp_filter_type.c_str());
+    filter_type_ = RobotPrecisionEKF::EKF_3STATE;  
   }
   else
   {
@@ -119,7 +125,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   ekf_filter_ = new RobotPrecisionEKF(filter_type_, 1.0/max(freq,1.0), sysNoise);
   
   // Add odometry measurement
-  if (odom_used_){
+  if (odom_used_ && (filter_type_ == RobotPrecisionEKF::EKF_5STATE)){
     if (!ekf_filter_->initMeasOdom(sigma_meas_odom_alpha_, sigma_meas_odom_eps_))
       ROS_WARN("Tried to initialize Odometry measurement but failed");
   }

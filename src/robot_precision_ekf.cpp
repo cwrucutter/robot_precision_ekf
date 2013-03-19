@@ -49,7 +49,8 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
   odom_initialized_(false),
   imu_initialized_(false),
   gps_initialized_(false),
-  dt_(timestep)
+  dt_(timestep),
+  new_input_(false)
 {
  
   /*********************
@@ -59,7 +60,7 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
   filter_type_ = type;
   if (filter_type_ == EKF_5STATE)
     state_size_ = 5;
-  else if (filter_type_ == RobotPrecisionEKF::EKF_3STATE_INPUTS)
+  else if (filter_type_ == RobotPrecisionEKF::EKF_3STATE)
     state_size_ = 3;
   else
   {
@@ -153,7 +154,7 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       prior_  = new Gaussian(prior_Mu,prior_Cov);
       return true;
       
-    case RobotPrecisionEKF::EKF_3STATE_INPUTS:
+    case RobotPrecisionEKF::EKF_3STATE:
       sys_noise_Mu(1) = MU_SYSTEM_NOISE_X;
       sys_noise_Mu(2) = MU_SYSTEM_NOISE_Y;
       sys_noise_Mu(3) = MU_SYSTEM_NOISE_THETA;
@@ -161,7 +162,7 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       sys_Q(1,1) = noiseIn(1)*dt_;
       sys_Q(2,2) = noiseIn(2)*dt_;
       sys_Q(3,3) = noiseIn(3)*dt_;
-      sys_covariance_ = sys_Q;
+      //sys_covariance_ = sys_Q;
 
       // Create Gaussian
       system_Uncertainty.ExpectedValueSet(sys_noise_Mu);
@@ -175,13 +176,9 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       prior_Mu(1) = PRIOR_MU_X; // This is just set to something arbitrary because the 
       prior_Mu(2) = PRIOR_MU_Y; // filter shold be able to figure it all out. Or something
       prior_Mu(3) = PRIOR_MU_THETA;
-      prior_Mu(4) = PRIOR_MU_VEL;
-      prior_Mu(5) = PRIOR_MU_OMG;
       prior_Cov(1,1) = PRIOR_COV_X;
       prior_Cov(2,2) = PRIOR_COV_Y;
       prior_Cov(3,3) = PRIOR_COV_THETA;
-      prior_Cov(4,4) = PRIOR_COV_VEL;
-      prior_Cov(5,5) = PRIOR_COV_OMG;
       prior_  = new Gaussian(prior_Mu,prior_Cov);
       return true;
       
@@ -233,7 +230,7 @@ bool RobotPrecisionEKF::initMeasOdom(double alpha, double epsilon)
       odom_initialized_ = true;
       return true;
       
-    case RobotPrecisionEKF::EKF_3STATE_INPUTS:
+    case RobotPrecisionEKF::EKF_3STATE:
       // Odometry is handled as an input! Not a measurement
       return false;
       
@@ -263,7 +260,7 @@ bool RobotPrecisionEKF::initMeasGPS(ColumnVector noiseIn)
   switch (filter_type_)
   {
     case RobotPrecisionEKF::EKF_5STATE:
-    case RobotPrecisionEKF::EKF_3STATE_INPUTS:
+    case RobotPrecisionEKF::EKF_3STATE:
       // XY MEASUREMENT at Arbitrary relationship to origin (nonlinear)
       // y = [xgps;  = [x + xarm*cos(tht) - yarm*sin(tht); 
       //      ygps]     y + xarm*sin(tht) + yarm*cos(tht)]
@@ -297,11 +294,23 @@ void RobotPrecisionEKF::systemUpdate()
   {
     filter_->Update(sys_model_);
   }
-  else if (filter_type_ == EKF_3STATE_INPUTS)
+  else if (filter_type_ == EKF_3STATE)
   {
-    //TODO: How to propagate the input noise correctly????
+    //TODO: How to propogate the input noise correctly????
+    if (!new_input_)
+    {
+  cout << "Setting Inputs!: " << __LINE__ << endl;
+      ColumnVector temp(2);
+      temp(1) = 0.0; temp(2) = 0.0;
+      inputs_ = temp;
+    }
+    
+  cout << "Debugging: " << __LINE__ << endl;
+  cout << inputs_ << endl;
+  cout << "Debugging: " << __LINE__ << endl;
     filter_->Update(sys_model_,inputs_);
-    new_input_ = false;
+  cout << "Debugging: " << __LINE__ << endl;
+    //new_input_ = false;
   }
   
   // Store posterior
@@ -332,6 +341,7 @@ void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
 {
   if (filter_type_ == EKF_5STATE)
   {
+    cout << "Measuremnt Update Odom 5State: " << __LINE__ << endl;
     //Prepare measurement
     ColumnVector odom(ODOM_MEAS_SIZE);
     odom(1) = vR;
@@ -351,11 +361,16 @@ void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
   else
   {
     // Store the odometry to use during the next system update
+    cout << "Measuremnt Update Odom 3State: " << __LINE__ << endl;
     ColumnVector odomIn(2);
     odomIn(1) = vR;
     odomIn(2) = vL;
     inputs_ = odomIn;
-    bool new_input_ = true;
+    //inputs_(1) = vR;
+    //inputs_(2) = vL;
+    new_input_ = true;
+  cout << inputs_ << endl;
+  cout << "Vr: " << vR << " vL: "<< vL << endl;
   }
 }
 

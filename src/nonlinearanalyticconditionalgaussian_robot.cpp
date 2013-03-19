@@ -121,6 +121,7 @@ namespace BFL
       }
       else if (num_states_ == 3)
       {        
+      cout << "Getting derivative of the state\n";
         // Jacobian F = df(x,u)/dx for a mobile robot, where x = [x;y;tht] and u = [vR;vL]
         state = ConditionalArgumentGet(0);
         input = ConditionalArgumentGet(1);
@@ -143,7 +144,7 @@ namespace BFL
         exit(-BFL_ERRMISUSE);     
       }
     }
-    else if (i == 1 and (num_cond_args_ > 1)) 
+    else if (i == 1 && (num_cond_args_ > 1)) 
     {
       //derivative to the second conditional argument (u)
       cout << "Getting derivative of the inputs\n";
