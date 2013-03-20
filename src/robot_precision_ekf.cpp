@@ -321,7 +321,7 @@ bool RobotPrecisionEKF::initMeasGPS(ColumnVector noiseIn)
       measurement_Uncertainty_gps.CovarianceSet(meas_R_gps);
 
       // create the measurement model
-      gps_meas_pdf_   = new NonLinearAnalyticConditionalGaussianGPSMeasurement(measurement_Uncertainty_gps);
+      gps_meas_pdf_   = new NonLinearAnalyticConditionalGaussianGPSMeasurement(measurement_Uncertainty_gps, state_size_);
       gps_meas_model_ = new AnalyticMeasurementModelGaussianUncertainty(gps_meas_pdf_);
       gps_initialized_ = true;
       return true;

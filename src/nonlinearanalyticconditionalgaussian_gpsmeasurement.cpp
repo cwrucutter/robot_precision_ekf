@@ -25,13 +25,14 @@ namespace BFL
   using namespace MatrixWrapper;
 
 
-  NonLinearAnalyticConditionalGaussianGPSMeasurement::NonLinearAnalyticConditionalGaussianGPSMeasurement(const Gaussian& additiveNoise)
+  NonLinearAnalyticConditionalGaussianGPSMeasurement::NonLinearAnalyticConditionalGaussianGPSMeasurement(const Gaussian& additiveNoise, int state_size)
     : AnalyticConditionalGaussianAdditiveNoise(additiveNoise,NUMCONDARGUMENTS),
-      df(GPS_MEAS_SIZE,STATE_SIZE)
+      df(GPS_MEAS_SIZE,state_size),
+      state_size_(state_size)
   {
     // initialize df matrix
     for (unsigned int i=1; i<=GPS_MEAS_SIZE; i++){
-      for (unsigned int j=1; j<=STATE_SIZE; j++){
+      for (unsigned int j=1; j<=state_size_; j++){
         if (i==j) df(i,j) = 1;
         else df(i,j) = 0;
       }

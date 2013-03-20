@@ -44,7 +44,7 @@ namespace BFL
           and \f$\mu\f$
           @param additiveNoise Pdf representing the additive Gaussian uncertainty
       */
-      NonLinearAnalyticConditionalGaussianGPSMeasurement( const Gaussian& additiveNoise);
+      NonLinearAnalyticConditionalGaussianGPSMeasurement( const Gaussian& additiveNoise, int state_size);
 
       /// Destructor
       virtual ~NonLinearAnalyticConditionalGaussianGPSMeasurement();
@@ -55,6 +55,7 @@ namespace BFL
 
     private:
       mutable MatrixWrapper::Matrix df;
+      int state_size_;
     };
 
 } // End namespace BFL
