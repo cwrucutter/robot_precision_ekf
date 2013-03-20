@@ -130,11 +130,11 @@ namespace BFL
     w = (input(1)-input(2))/ODOM_TRACK;
     tht_mid = state(3)+w*dt/2; // Theta mid-pt = Thtold + w*dt/2
     
-    du(1,1) = 0.5*cos(tht_mid)-v*dt/(2.0*ODOM_TRACK)*sin(tht_mid);
-    du(1,2) = 0.5*cos(tht_mid)+v*dt/(2.0*ODOM_TRACK)*sin(tht_mid);
+    du(1,1) = dt*0.5*cos(tht_mid)-v*dt*dt/(2.0*ODOM_TRACK)*sin(tht_mid);
+    du(1,2) = dt*0.5*cos(tht_mid)+v*dt*dt/(2.0*ODOM_TRACK)*sin(tht_mid);
     
-    du(2,1) = 0.5*sin(tht_mid)+v*dt/(2.0*ODOM_TRACK)*cos(tht_mid);
-    du(2,2) = 0.5*sin(tht_mid)-v*dt/(2.0*ODOM_TRACK)*cos(tht_mid);
+    du(2,1) = dt*0.5*sin(tht_mid)+v*dt*dt/(2.0*ODOM_TRACK)*cos(tht_mid);
+    du(2,2) = dt*0.5*sin(tht_mid)-v*dt*dt/(2.0*ODOM_TRACK)*cos(tht_mid);
     
     du(3,1) =  dt/ODOM_TRACK;
     du(3,2) = -dt/ODOM_TRACK;
