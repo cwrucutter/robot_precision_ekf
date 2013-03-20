@@ -20,8 +20,8 @@
     <param name="sigma_sys_tht" value="0.05"/>
     <param name="sigma_sys_vel" value="0.30"/>
     <param name="sigma_sys_omg" value="0.30"/>
-    <param name="sigma_sys_vR" value="0.05"/>
-    <param name="sigma_sys_vL" value="0.05"/>
+    <param name="sigma_sys_vR" value="0.10"/>
+    <param name="sigma_sys_vL" value="0.10"/>
   
     <param name="sigma_meas_gps_x" value="0.02"/>
     <param name="sigma_meas_gps_y" value="0.02"/>
