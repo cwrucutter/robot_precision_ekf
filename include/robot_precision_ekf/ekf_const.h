@@ -38,12 +38,16 @@
 #define PRIOR_MU_THETA 0	//M_PI/4
 #define PRIOR_MU_VEL 0
 #define PRIOR_MU_OMG 0
+#define PRIOR_MU_VRERR 0
+#define PRIOR_MU_VLERR 0
 // Initial covariances of position and orientation
 #define PRIOR_COV_X pow(100,2)
 #define PRIOR_COV_Y pow(100,2)
 #define PRIOR_COV_THETA pow(M_PI,2)
 #define PRIOR_COV_VEL pow(10,2)
 #define PRIOR_COV_OMG pow(10,2)
+#define PRIOR_COV_VRERR pow(1,2)
+#define PRIOR_COV_VLERR pow(1,2)
 
 // System Noise
 #define MU_SYSTEM_NOISE_X 0.0 
@@ -51,6 +55,8 @@
 #define MU_SYSTEM_NOISE_THETA 0.0
 #define MU_SYSTEM_NOISE_VEL 0.0
 #define MU_SYSTEM_NOISE_OMG 0.0
+#define MU_SYSTEM_NOISE_VRERR 0.0
+#define MU_SYSTEM_NOISE_VLERR 0.0
 //#define SIGMA_SYSTEM_NOISE_X pow(0.01,2)
 //#define SIGMA_SYSTEM_NOISE_Y pow(0.01,2)
 //#define SIGMA_SYSTEM_NOISE_THT pow(2*M_PI/180,2)

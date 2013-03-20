@@ -21,6 +21,7 @@ rosbuild_add_boost_directories()
 rosbuild_add_executable(robot_precision_ekf 
                        src/robot_precision_ekf.cpp 
                        src/nonlinearanalyticconditionalgaussian_robot.cpp 
+                       src/nonlinearanalyticconditionalgaussian_robot_verr.cpp 
                        src/nonlinearanalyticconditionalgaussian_3state.cpp 
                        src/nonlinearanalyticconditionalgaussian_gpsmeasurement.cpp
                        src/robot_precision_ekf_node.cpp)

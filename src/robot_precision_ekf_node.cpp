@@ -358,17 +358,24 @@ void RobotPrecisionEKFNode::publish()
   if (debug_)
   {
     // Send state and diagonal error bars
-    ekf_debug_.ekf_x = mean(1);
-    ekf_debug_.ekf_y = mean(2);
-    ekf_debug_.ekf_tht = mean(3);
-    ekf_debug_.ekf_vel = mean(4);
-    ekf_debug_.ekf_omg = mean(5);
-    ekf_debug_.ekf_err_x = 3*sqrt(cov(1,1));
-    ekf_debug_.ekf_err_y = 3*sqrt(cov(2,2));
-    ekf_debug_.ekf_err_tht = 3*sqrt(cov(3,3));
-    ekf_debug_.ekf_err_vel = 3*sqrt(cov(4,4));
-    ekf_debug_.ekf_err_omg = 3*sqrt(cov(5,5));
-    debug_pub_.publish(ekf_debug_);
+    switch (filter_type_)
+    {
+      case (RobotPrecisionEKF::EKF_5STATE):
+        ekf_debug_.ekf_vel = mean(4);
+        ekf_debug_.ekf_omg = mean(5);
+        ekf_debug_.ekf_err_vel = 3*sqrt(cov(4,4));
+        ekf_debug_.ekf_err_omg = 3*sqrt(cov(5,5));
+      case (RobotPrecisionEKF::EKF_3STATE):
+        ekf_debug_.ekf_x = mean(1);
+        ekf_debug_.ekf_y = mean(2);
+        ekf_debug_.ekf_tht = mean(3);
+        ekf_debug_.ekf_err_x = 3*sqrt(cov(1,1));
+        ekf_debug_.ekf_err_y = 3*sqrt(cov(2,2));
+        ekf_debug_.ekf_err_tht = 3*sqrt(cov(3,3));
+      default:
+        debug_pub_.publish(ekf_debug_);
+      break;
+    }
   }
   
 }

@@ -47,6 +47,7 @@
 #include <pdf/linearanalyticconditionalgaussian.h>
 #include "nonlinearanalyticconditionalgaussian_robot.h"
 #include "nonlinearanalyticconditionalgaussian_3state.h"
+#include "nonlinearanalyticconditionalgaussian_robot_verr.h"
 #include "nonlinearanalyticconditionalgaussian_gpsmeasurement.h"
 
 #include "ekf_const.h"
@@ -66,7 +67,8 @@ public:
 
   enum FilterType {
     EKF_5STATE = 0,
-    EKF_3STATE
+    EKF_3STATE,
+    EKF_7STATE_VERR
   };
 
   /// constructor
