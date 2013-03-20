@@ -83,6 +83,8 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   nh_private.param("sigma_sys_tht",  sigma_sys_tht_, 0.05);
   nh_private.param("sigma_sys_vel",  sigma_sys_vel_, 0.5);
   nh_private.param("sigma_sys_omg",  sigma_sys_omg_, 0.5);
+  nh_private.param("sigma_sys_vR", sigma_sys_vR_, 0.05);
+  nh_private.param("sigma_sys_vL", sigma_sys_vL_, 0.05);
   nh_private.param("sigma_meas_gps_x",  sigma_meas_gps_x_, 0.05);
   nh_private.param("sigma_meas_gps_y",  sigma_meas_gps_x_, 0.05);
   nh_private.param("sigma_meas_odom_alpha",  sigma_meas_odom_alpha_, 0.01);
@@ -91,14 +93,17 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   // Node parameters
   nh_private.param("debug",   debug_, false);
 
+  ROS_INFO("Setting filter type to: %s", tmp_filter_type.c_str());
   if(tmp_filter_type == "ekf_5state")
   {
-    ROS_INFO("Setting filter type to: %s", tmp_filter_type.c_str());
     filter_type_ = RobotPrecisionEKF::EKF_5STATE;
   }
   else if(tmp_filter_type == "ekf_3state")
   {
-    ROS_INFO("Setting filter type to: %s", tmp_filter_type.c_str());
+    filter_type_ = RobotPrecisionEKF::EKF_3STATE;  
+  }
+  else if(tmp_filter_type == "ekf_7state_verr")
+  {
     filter_type_ = RobotPrecisionEKF::EKF_3STATE;  
   }
   else
@@ -113,12 +118,14 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   // INITIALIZE EKF and MEASUREMENTS
   // ********************************
    
-  MatrixWrapper::ColumnVector sysNoise(5);
+  MatrixWrapper::ColumnVector sysNoise(7);
   sysNoise(1) = pow(sigma_sys_x_,2); // variance = sigma^2
   sysNoise(2) = pow(sigma_sys_y_,2);
   sysNoise(3) = pow(sigma_sys_tht_,2);
   sysNoise(4) = pow(sigma_sys_vel_,2);
   sysNoise(5) = pow(sigma_sys_omg_,2);
+  sysNoise(6) = pow(sigma_sys_vR_,2);
+  sysNoise(7) = pow(sigma_sys_vL_,2);
   sys_covariance_ = sysNoise;
   
   // Initialize Filter with desired configuration, dt, and noise
