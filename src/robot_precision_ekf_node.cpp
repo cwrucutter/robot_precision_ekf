@@ -104,7 +104,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   }
   else if(tmp_filter_type == "ekf_7state_verr")
   {
-    filter_type_ = RobotPrecisionEKF::EKF_3STATE;  
+    filter_type_ = RobotPrecisionEKF::EKF_7STATE_VERR;  
   }
   else
   {
@@ -254,6 +254,12 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
 void RobotPrecisionEKFNode::imuCallback(const ImuConstPtr& imu)
 {
   imu_callback_counter_++;
+  
+  
+  if (debug_)
+  {
+    ekf_debug_.imu_omg = imu->angular_velocity.z;
+  }
 };
 
 // callback function for GPS data
