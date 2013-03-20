@@ -361,8 +361,8 @@ void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
     
     // Update
     MatrixWrapper::SymmetricMatrix odomNoise(ODOM_MEAS_SIZE); // Dynamic odometry noise, based on each wheel vel
-    odomNoise(1,1) = odom_alpha_ * vR * vR + odom_eps_;   //  = vR^2 * alpha  +  epsilon
-    odomNoise(2,2) = odom_alpha_ * vL * vL + odom_eps_;   //  = vL^2 * alpha  +  epsilon
+    odomNoise(1,1) = odom_alpha_ * fabs(vR) + odom_eps_;   //  = vR^2 * alpha  +  epsilon
+    odomNoise(2,2) = odom_alpha_ * fabs(vL) + odom_eps_;   //  = vL^2 * alpha  +  epsilon
     odom_meas_pdf_->AdditiveNoiseSigmaSet(odomNoise);
     odom_meas_model_->MeasurementPdfSet(odom_meas_pdf_); // TODO: Do I really need to Re-set the MeasurementPdf? Or can I just modify that?
     filter_->Update(odom_meas_model_,odom);
