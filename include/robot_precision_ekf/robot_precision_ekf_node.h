@@ -139,6 +139,8 @@ private:
   double timeout_;
   bool debug_;
   MatrixWrapper::ColumnVector sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
+  //double time_old_;
+  //double time_new_;
   
   // debugging Stuff
   std::ofstream odom_file_, imu_file_, gps_file_, corr_file_, time_file_, extra_file_;

@@ -189,17 +189,19 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
 
   // publish state service
   //state_srv_ = nh_private.advertiseService("get_status", &RobotPrecisionEKFNode::getStatus, this);
+  //time_new_ = ros::Time::now().toSec();
+  //time_old_ = time_new_;
 
   if (debug_){
     debug_pub_ = nh_private.advertise<robot_precision_ekf::EKFDebug>("ekf_debug", 2);
     // open files for debugging
     // TODO: Use files for debugging/ automated testing
-    //odom_file_.open("/tmp/odom_file.txt");
+    odom_file_.open("/tmp/odom_file.txt");
     //imu_file_.open("/tmp/imu_file.txt");
-    //gps_file_.open("/tmp/gps_file.txt");
-    //corr_file_.open("/tmp/corr_file.txt");
-    //time_file_.open("/tmp/time_file.txt");
-    //extra_file_.open("/tmp/extra_file.txt");
+    gps_file_.open("/tmp/gps_file.txt");
+    corr_file_.open("/tmp/corr_file.txt");
+    time_file_.open("/tmp/time_file.txt");
+    extra_file_.open("/tmp/extra_file.txt");
   }
 };
 
@@ -209,12 +211,12 @@ RobotPrecisionEKFNode::~RobotPrecisionEKFNode(){
 
   if (debug_){
     // close files for debugging
-    //odom_file_.close();
+    odom_file_.close();
     //imu_file_.close();
-    //gps_file_.close();
-    //corr_file_.close();
-    //time_file_.close();
-    //extra_file_.close();
+    gps_file_.close();
+    corr_file_.close();
+    time_file_.close();
+    extra_file_.close();
   }
 };
 
@@ -222,7 +224,7 @@ RobotPrecisionEKFNode::~RobotPrecisionEKFNode(){
 // callback function for odom data
 void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
 {
-  odom_callback_counter_++;
+  //odom_callback_counter_++;
   odom_stamp_ = odom->header.stamp;
   odom_time_  = Time::now();
   
@@ -246,6 +248,7 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   {
     ekf_debug_.enc_vel = v;
     ekf_debug_.enc_omg = w;
+    odom_file_ << v << "," << w << endl;
   }
 };
 
@@ -253,7 +256,7 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
 // callback function for imu data
 void RobotPrecisionEKFNode::imuCallback(const ImuConstPtr& imu)
 {
-  imu_callback_counter_++;
+  //imu_callback_counter_++;
   
   
   if (debug_)
@@ -265,7 +268,7 @@ void RobotPrecisionEKFNode::imuCallback(const ImuConstPtr& imu)
 // callback function for GPS data
 void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
 {
-  gps_callback_counter_++;
+  //gps_callback_counter_++;
   gps_stamp_ = gps->header.stamp;
   gps_time_  = Time::now();
 
@@ -280,6 +283,7 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   {
     ekf_debug_.gps_x = gps->pose.position.x;
     ekf_debug_.gps_y = gps->pose.position.y;
+    gps_file_ << gps->pose.position.x << "," << gps->pose.position.y << endl;
   }
   
   // Once the GPS message arrives, publish the updated state!
@@ -290,7 +294,9 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
 // filter loop
 void RobotPrecisionEKFNode::spin(const ros::TimerEvent& e)
 {
+  //time_new_ = ros::Time::now().toSec();
   ROS_INFO("Spin function at time %f", ros::Time::now().toSec());
+  //time_old_ = time_new_;
   
   ekf_filter_->systemUpdate();
   // TODO: Update the measurements here?? Or in the callbacks?? I just dont know!
@@ -370,6 +376,14 @@ void RobotPrecisionEKFNode::publish()
   // Send the debugging output...
   if (debug_)
   {
+    int numstates = 0;
+    if (filter_type_ == RobotPrecisionEKF::EKF_3STATE)
+      numstates = 3;
+    else
+      numstates = 5;
+    for (int i=1; i<=(numstates-1); i++)
+      corr_file_ << mean(i) << ",";
+    corr_file_ << mean(numstates) << endl;
     // Send state and diagonal error bars
     switch (filter_type_)
     {
