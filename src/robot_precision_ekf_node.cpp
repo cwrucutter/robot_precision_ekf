@@ -200,8 +200,8 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
     //imu_file_.open("/tmp/imu_file.txt");
     gps_file_.open("/tmp/gps_file.txt");
     corr_file_.open("/tmp/corr_file.txt");
-    time_file_.open("/tmp/time_file.txt");
-    extra_file_.open("/tmp/extra_file.txt");
+    //time_file_.open("/tmp/time_file.txt");
+    //extra_file_.open("/tmp/extra_file.txt");
   }
 };
 
@@ -215,8 +215,8 @@ RobotPrecisionEKFNode::~RobotPrecisionEKFNode(){
     //imu_file_.close();
     gps_file_.close();
     corr_file_.close();
-    time_file_.close();
-    extra_file_.close();
+    //time_file_.close();
+    //extra_file_.close();
   }
 };
 

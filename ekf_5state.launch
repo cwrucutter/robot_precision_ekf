@@ -15,14 +15,14 @@
     <param name="transform_tolerance" value="0.15" />
 
     <!-- Noise parameters -->
-    <param name="sigma_sys_x" value="0.01"/>
-    <param name="sigma_sys_y" value="0.01"/>
-    <param name="sigma_sys_tht" value="0.05"/>
-    <param name="sigma_sys_vel" value="0.30"/>
-    <param name="sigma_sys_omg" value="0.30"/>
+    <param name="sigma_sys_x" value="0.06"/>
+    <param name="sigma_sys_y" value="0.06"/>
+    <param name="sigma_sys_tht" value="0.04"/>
+    <param name="sigma_sys_vel" value="0.50"/>
+    <param name="sigma_sys_omg" value="0.50"/>
   
-    <param name="sigma_meas_gps_x" value="0.02"/>
-    <param name="sigma_meas_gps_y" value="0.02"/>
+    <param name="sigma_meas_gps_x" value="0.03"/>
+    <param name="sigma_meas_gps_y" value="0.03"/>
     <param name="sigma_meas_odom_alpha" value="0.005"/>
     <param name="sigma_meas_odom_epsilon" value="0.001"/>
 
