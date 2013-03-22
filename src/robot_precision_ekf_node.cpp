@@ -411,6 +411,7 @@ void RobotPrecisionEKFNode::publish()
       numstates = 3;
     else
       numstates = 5;
+    corr_file_ << time_new_<< ",";
     for (int i=1; i<=(numstates-1); i++)
       corr_file_ << mean(i) << ",";
     corr_file_ << mean(numstates)<<endl;
