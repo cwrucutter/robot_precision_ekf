@@ -190,9 +190,8 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   else ROS_INFO("VO sensor will NOT be used");
 
   // publish state service
-  //state_srv_ = nh_private.advertiseService("get_status", &RobotPrecisionEKFNode::getStatus, this);
-  //time_new_ = ros::Time::now().toSec();
-  //time_old_ = time_new_;
+  time_new_ = ros::Time::now().toSec();
+  time_old_ = time_new_;
 
   if (debug_){
     debug_pub_ = nh_private.advertise<robot_precision_ekf::EKFDebug>("ekf_debug", 2);
@@ -299,9 +298,9 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
 
 void RobotPrecisionEKFNode::systemUpdate()
 {
-  //time_new_ = ros::Time::now().toSec();
-  ROS_INFO("Spin function at time %f", ros::Time::now().toSec());
-  //time_old_ = time_new_;
+  time_new_ = ros::Time::now().toSec();
+  ROS_INFO("\nSpin function at time %f, Elapsed: %f", ros::Time::now().toSec(), time_new_-time_old_);
+  time_old_ = time_new_;
   
   ekf_filter_->systemUpdate();
   // TODO: Update the measurements here?? Or in the callbacks?? I just dont know!
