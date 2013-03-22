@@ -290,9 +290,7 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   publish();
 };
 
-
-// filter loop
-void RobotPrecisionEKFNode::spin(const ros::TimerEvent& e)
+void RobotPrecisionEKFNode::systemUpdate()
 {
   //time_new_ = ros::Time::now().toSec();
   ROS_INFO("Spin function at time %f", ros::Time::now().toSec());
@@ -310,6 +308,12 @@ void RobotPrecisionEKFNode::spin(const ros::TimerEvent& e)
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
        
   // The system will spin whether or not any measurements are received
+}
+
+// filter loop
+void RobotPrecisionEKFNode::spin(const ros::TimerEvent& e)
+{
+  systemUpdate();
 };
 
 

@@ -85,6 +85,9 @@ private:
   /// the mail filter loop that will be called periodically
   void spin(const ros::TimerEvent& e);
   
+  // Perform the system update
+  void systemUpdate();
+  
   /// Publishes the Filter solution
   void publish();
 
