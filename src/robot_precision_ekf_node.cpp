@@ -148,7 +148,9 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   }
   
   // TODO: Use IMU
-  //imu_initialized_ = ekf_filter_->initMeasIMU();  
+  //imu_initialized_ = ekf_filter_->initMeasIMU(); 
+  
+  systemUpdate();
   
 
   // ********************************
@@ -271,7 +273,12 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   //gps_callback_counter_++;
   gps_stamp_ = gps->header.stamp;
   gps_time_  = Time::now();
-
+  
+  // Perform the system update every time the GPS is received!
+  // It should be received every 10 hz, and may be more reliable than the 
+  // internal ROS time. Plus, we dont want the system update and measurement 
+  // updates to have any phase difference
+  this->systemUpdate();
   ekf_filter_->measurementUpdateGPS(gps->pose.position.x,gps->pose.position.y);
   
   cout << endl << endl;
@@ -313,7 +320,7 @@ void RobotPrecisionEKFNode::systemUpdate()
 // filter loop
 void RobotPrecisionEKFNode::spin(const ros::TimerEvent& e)
 {
-  systemUpdate();
+  //systemUpdate();
 };
 
 
