@@ -390,7 +390,7 @@ void RobotPrecisionEKFNode::publish()
     int numstates = 0;
     if (filter_type_ == RobotPrecisionEKF::EKF_7STATE_VERR)
       numstates = 7;
-    if (filter_type_ == RobotPrecisionEKF::EKF_3STATE)
+    else if (filter_type_ == RobotPrecisionEKF::EKF_3STATE)
       numstates = 3;
     else
       numstates = 5;
@@ -414,7 +414,7 @@ void RobotPrecisionEKFNode::publish()
         ekf_debug_.ekf_err_y = 3*sqrt(cov(2,2));
         ekf_debug_.ekf_err_tht = 3*sqrt(cov(3,3));
       default:
-        //debug_pub_.publish(ekf_debug_);
+        debug_pub_.publish(ekf_debug_);
       break;
     }
   }
