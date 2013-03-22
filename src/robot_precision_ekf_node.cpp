@@ -377,13 +377,16 @@ void RobotPrecisionEKFNode::publish()
   if (debug_)
   {
     int numstates = 0;
+    if (filter_type_ == RobotPrecisionEKF::EKF_7STATE_VERR)
+      numstates = 7;
     if (filter_type_ == RobotPrecisionEKF::EKF_3STATE)
       numstates = 3;
     else
       numstates = 5;
     for (int i=1; i<=(numstates-1); i++)
       corr_file_ << mean(i) << ",";
-    corr_file_ << mean(numstates) << endl;
+    corr_file_ << mean(numstates)<<endl;
+    //corr_file_ << mean(1)<<","<<mean(2)<<","<<mean(3)<<","<<mean(4)<<","<<mean(5)<<","<<mean(6)<<","<<mean(7)<<endl;
     // Send state and diagonal error bars
     switch (filter_type_)
     {
@@ -400,7 +403,7 @@ void RobotPrecisionEKFNode::publish()
         ekf_debug_.ekf_err_y = 3*sqrt(cov(2,2));
         ekf_debug_.ekf_err_tht = 3*sqrt(cov(3,3));
       default:
-        debug_pub_.publish(ekf_debug_);
+        //debug_pub_.publish(ekf_debug_);
       break;
     }
   }
