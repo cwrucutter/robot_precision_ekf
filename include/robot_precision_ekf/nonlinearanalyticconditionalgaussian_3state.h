@@ -58,6 +58,7 @@ namespace BFL
       
       // Function to set the noise parameters
       void setOdomNoise(double alpha, double epsilon);
+      void setTimestep(double timestep);
 
     private:
       mutable MatrixWrapper::Matrix df;

@@ -339,6 +339,22 @@ bool RobotPrecisionEKF::initMeasIMU(ColumnVector noiseIn)
   return false;
 }
 
+void RobotPrecisionEKF::setNewTimestep(double timestep)
+{
+  if (filter_type_ == EKF_3STATE)
+  {
+    try
+    {
+      dynamic_cast<NonLinearAnalyticConditionalGaussian3State *>(sys_pdf_)->setTimestep(timestep);
+    }
+    catch (std::bad_cast err)
+    {
+      ROS_ERROR("Timestep setting failed!");
+      return;
+    }
+  }
+}
+
 void RobotPrecisionEKF::systemUpdate()
 {
  

@@ -93,6 +93,8 @@ public:
   
   void measurementUpdateOdom(double vR, double vL);
   
+  void setNewTimestep(double timestep);
+  
   MatrixWrapper::ColumnVector getMean();
   
   MatrixWrapper::SymmetricMatrix getCovariance();

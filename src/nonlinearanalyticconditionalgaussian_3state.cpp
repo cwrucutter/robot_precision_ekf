@@ -52,6 +52,11 @@ namespace BFL
     alpha_ = alpha;
     epsilon_ = epsilon;
   }
+  
+  void NonLinearAnalyticConditionalGaussian3State::setTimestep(double timestep)
+  {
+    dt = timestep;
+  }
 
   ColumnVector NonLinearAnalyticConditionalGaussian3State::ExpectedValueGet() const
   {

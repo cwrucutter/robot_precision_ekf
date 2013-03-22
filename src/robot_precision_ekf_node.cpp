@@ -277,9 +277,15 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   // It should be received every 10 hz, and may be more reliable than the 
   // internal ROS time. Plus, we dont want the system update and measurement 
   // updates to have any phase difference
+  time_new_ = gps_stamp_.toSec();//ros::Time::now().toSec();
+  double time_diff = time_new_-time_old_;
+  ekf_filter_->setNewTimestep(time_diff);
+  time_old_ = time_new_;
+  
   this->systemUpdate();
   ekf_filter_->measurementUpdateGPS(gps->pose.position.x,gps->pose.position.y);
   
+  ROS_INFO("\nSpin function at time %f, Elapsed: %f", ros::Time::now().toSec(), time_diff);
   cout << endl << endl;
   cout << "GPS Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
@@ -298,15 +304,27 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
 
 void RobotPrecisionEKFNode::systemUpdate()
 {
-  time_new_ = ros::Time::now().toSec();
-  ROS_INFO("\nSpin function at time %f, Elapsed: %f", ros::Time::now().toSec(), time_new_-time_old_);
-  time_old_ = time_new_;
+  // Current Design:
+  //   - Everything Relies on the GPS measurement being received:
+  //   - Upon receipt of GPS message, the system is updated:
+  //       - dt modified
+  //       - system prediction update
+  //       - measurement update
+  //   - Finally, the state and other debugging information is published
+  
+  // TODO: Experiment in the future with different timing schemes
+  // 1. DIDNT WORK: System update based on a ROS timer, measurement updates in all callbacks
+  //     I believe when the system was updated at 10Hz and the GPS measurement got out of phase
+  //     dependent on some weird things in the node. Very very strange and finnicky magic happened
+  // 2. HAVENT TRIED: System update based on a ROS timer, System AND measurement updates in all callbacks
+  //     This will require a total change in the filter timestep at each update. BUT, this will free 
+  //     the filter from depending on the GPS measurement. Ie, the GPS can NOT happen at all and
+  //     the system will still update using other measurements received
+  // 3. HAVENT TRIED: System update based on a ROS timer, verify during each measurement and sys update
+  //     to make sure everything is synced and no measurements are out of phase (ie, two GPS updates 
+  //     should not occur back-to-back without having a system update). 
   
   ekf_filter_->systemUpdate();
-  // TODO: Update the measurements here?? Or in the callbacks?? I just dont know!
-  // And where should I publish the message?? 
-  // Idea: Maybe I'll do the system update periodically in HERE...
-  //     but then I'll only publish after the GPS measurment update is received
   
   cout << endl << endl;
   cout << "System Update: " << endl;
