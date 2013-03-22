@@ -192,6 +192,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   // publish state service
   time_new_ = ros::Time::now().toSec();
   time_old_ = time_new_;
+  time_start_ = time_new_;
 
   if (debug_){
     debug_pub_ = nh_private.advertise<robot_precision_ekf::EKFDebug>("ekf_debug", 2);
@@ -249,7 +250,7 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   {
     ekf_debug_.enc_vel = v;
     ekf_debug_.enc_omg = w;
-    odom_file_ << v << "," << w << endl;
+    odom_file_ << time_new_-time_start_ << "," << v << "," << w << endl;
   }
 };
 
@@ -295,7 +296,7 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   {
     ekf_debug_.gps_x = gps->pose.position.x;
     ekf_debug_.gps_y = gps->pose.position.y;
-    gps_file_ << gps->pose.position.x << "," << gps->pose.position.y << endl;
+    gps_file_ << time_new_-time_start_ <<","<<gps->pose.position.x << "," << gps->pose.position.y << endl;
   }
   
   // Once the GPS message arrives, publish the updated state!
@@ -411,11 +412,10 @@ void RobotPrecisionEKFNode::publish()
       numstates = 3;
     else
       numstates = 5;
-    corr_file_ << time_new_<< ",";
+    corr_file_ << time_new_-time_start_ << ",";
     for (int i=1; i<=(numstates-1); i++)
       corr_file_ << mean(i) << ",";
     corr_file_ << mean(numstates)<<endl;
-    //corr_file_ << mean(1)<<","<<mean(2)<<","<<mean(3)<<","<<mean(4)<<","<<mean(5)<<","<<mean(6)<<","<<mean(7)<<endl;
     // Send state and diagonal error bars
     switch (filter_type_)
     {
