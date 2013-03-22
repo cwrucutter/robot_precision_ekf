@@ -48,10 +48,12 @@ namespace BFL
 
       /// Destructor
       virtual ~NonLinearAnalyticConditionalGaussianRobotVerr();
-
+      
       // redefine virtual functions
       virtual MatrixWrapper::ColumnVector    ExpectedValueGet() const;
       virtual MatrixWrapper::Matrix          dfGet(unsigned int i)       const;
+      
+      void setTimestep(double timestep);
 
     private:
       mutable MatrixWrapper::Matrix df;

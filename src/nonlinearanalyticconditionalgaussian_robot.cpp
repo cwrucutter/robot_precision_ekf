@@ -41,9 +41,13 @@ namespace BFL
     }
   }
 
-
   NonLinearAnalyticConditionalGaussianRobot::~NonLinearAnalyticConditionalGaussianRobot(){}
 
+  void NonLinearAnalyticConditionalGaussianRobot::setTimestep(double timestep)
+  {
+    dt = timestep;
+  }
+  
   ColumnVector NonLinearAnalyticConditionalGaussianRobot::ExpectedValueGet() const
   {
     double v,w,tht_mid;

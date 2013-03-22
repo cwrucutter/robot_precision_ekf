@@ -341,17 +341,29 @@ bool RobotPrecisionEKF::initMeasIMU(ColumnVector noiseIn)
 
 void RobotPrecisionEKF::setNewTimestep(double timestep)
 {
-  if (filter_type_ == EKF_3STATE)
+  // TODO: Replace with the inheritance once I have a base RobotPrecisionSystemModel implemented
+  switch (filter_type_)
   {
-    try
-    {
-      dynamic_cast<NonLinearAnalyticConditionalGaussian3State *>(sys_pdf_)->setTimestep(timestep);
-    }
-    catch (std::bad_cast err)
-    {
-      ROS_ERROR("Timestep setting failed!");
-      return;
-    }
+    case EKF_3STATE:
+      try {
+        dynamic_cast<NonLinearAnalyticConditionalGaussian3State *>(sys_pdf_)->setTimestep(timestep); }
+      catch (std::bad_cast err) {
+        ROS_ERROR("Timestep setting failed"); }
+      break;
+    
+    case EKF_5STATE:
+      try {
+        dynamic_cast<NonLinearAnalyticConditionalGaussianRobot *>(sys_pdf_)->setTimestep(timestep); }
+      catch (std::bad_cast err){
+        ROS_ERROR("Timestep setting failed"); }
+      break;
+      
+    case EKF_7STATE_VERR:
+      try {
+        dynamic_cast<NonLinearAnalyticConditionalGaussianRobotVerr *>(sys_pdf_)->setTimestep(timestep); }
+      catch (std::bad_cast err) {
+        ROS_ERROR("Timestep setting failed"); }
+      break;
   }
 }
 
