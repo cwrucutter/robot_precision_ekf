@@ -29,6 +29,6 @@
     <param name="sigma_meas_odom_epsilon" value="0.003"/>
 
     <!-- Other -->
-    <param name="debug" value="true"/>
+    <param name="debug" value="false"/>
   </node>
 </launch>
