@@ -125,6 +125,7 @@ private:
   double sigma_meas_gps_y_;
   double sigma_meas_odom_alpha_;
   double sigma_meas_odom_eps_;
+  double sigma_meas_imu_omg_;
   
   // Transform handlers
   tf::TransformBroadcaster* tfb_;

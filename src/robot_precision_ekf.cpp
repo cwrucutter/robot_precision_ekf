@@ -255,6 +255,7 @@ bool RobotPrecisionEKF::initMeasOdom(double alpha, double epsilon)
         ROS_ERROR("Odometry Initialization Failed for 3-State EKF");
         return false;
       }
+      odom_initialized_ = true;
       return true;
       
     case RobotPrecisionEKF::EKF_7STATE_VERR:
@@ -333,9 +334,50 @@ bool RobotPrecisionEKF::initMeasGPS(ColumnVector noiseIn)
   return false;
 }
 
-bool RobotPrecisionEKF::initMeasIMU(ColumnVector noiseIn)
-{
-  // TODO: Implement IMU measurement
+bool RobotPrecisionEKF::initMeasIMU(double gyroNoise)
+{  
+  Matrix H_imu(IMU_MEAS_SIZE,state_size_);
+  H_imu = 0.0;
+      
+  ColumnVector meas_noise_Mu_imu(IMU_MEAS_SIZE);
+  SymmetricMatrix meas_R_imu(IMU_MEAS_SIZE);
+  meas_R_imu = 0.0;
+  
+  Gaussian measurement_Uncertainty_imu;
+  
+  // Measurement depends on the filter type desired
+  switch (filter_type_)
+  {
+    case RobotPrecisionEKF::EKF_5STATE:
+    case RobotPrecisionEKF::EKF_7STATE_VERR:
+      // IMU MEASUREMENT MODEL (linear)
+      // y = [omg]
+    
+      //TODO: Replace the hardcoded track width with the track from odometry parameter
+      H_imu(1,5) = 1.0;
+      
+      // Construct the measurement noise
+      meas_noise_Mu_imu(1) = IMU_MU_MEAS_NOISE_OMG;
+      meas_R_imu(1,1) = gyroNoise;
+      
+      measurement_Uncertainty_imu.ExpectedValueSet(meas_noise_Mu_imu);
+      measurement_Uncertainty_imu.CovarianceSet(meas_R_imu);
+
+      // create the measurement model
+      imu_meas_pdf_   = new LinearAnalyticConditionalGaussian(H_imu, measurement_Uncertainty_imu);
+      imu_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(imu_meas_pdf_);
+      imu_initialized_ = true;
+      return true;
+      
+    case RobotPrecisionEKF::EKF_3STATE:
+      // No current way to handle an omega measurement for the 3-state EKF...
+      // Darn.
+      return false;
+      
+    default:
+      return false;
+  }
+  
   return false;
 }
 
@@ -398,6 +440,12 @@ void RobotPrecisionEKF::systemUpdate()
 
 void RobotPrecisionEKF::measurementUpdateGPS(double x, double y)
 {
+  if (!gps_initialized_)
+  {
+    ROS_ERROR("Initialize GPS before calling measurementUpdateGPS");
+    return;
+  }
+  
   // Prepare measurement
   ColumnVector gps(GPS_MEAS_SIZE);
   gps(1) = x;
@@ -412,6 +460,12 @@ void RobotPrecisionEKF::measurementUpdateGPS(double x, double y)
 
 void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
 {
+  if (!odom_initialized_)
+  {
+    ROS_ERROR("Initialize Odom before calling measurementUpdateOdom");
+    return;
+  }
+  
   //Prepare measurement
   ColumnVector odom(ODOM_MEAS_SIZE);
   odom(1) = vR;
@@ -447,7 +501,43 @@ void RobotPrecisionEKF::measurementUpdateOdom(double vR, double vL)
   }
 }
 
+void RobotPrecisionEKF::measurementUpdateIMU(double omg)
+{
+  
+  //Prepare measurement
+  ColumnVector imu(IMU_MEAS_SIZE);
+  imu(1) = omg;
+  
+  switch (filter_type_)
+  {
+    case EKF_5STATE:
+    case EKF_7STATE_VERR:
+      if (!imu_initialized_)
+      {
+        ROS_ERROR("Initialize IMU before calling measurementUpdateIMU");
+        return;
+      }
+      // If necessary, set the noise here on a per-measurement basis
+      // But we probably dont need to do that for the IMU
+      
+      // Update
+      filter_->Update(imu_meas_model_,imu);
+      
+      // Store posterior
+      posterior_ = filter_->PostGet();
+      break;
+      
+    case EKF_3STATE:
+      ROS_WARN("IMU not implemented using 3-state KF. Use the 5-state EKF instead");
+      // Do nothing..?
+      break;
+      
+    default:
+      // Do nothing..?
+      break;
+  }
 
+}
 MatrixWrapper::ColumnVector RobotPrecisionEKF::getMean()
 {
   return posterior_->ExpectedValueGet();

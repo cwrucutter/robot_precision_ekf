@@ -80,4 +80,8 @@
 #define ODOM_MU_MEAS_NOISE_X 0.0
 #define ODOM_MU_MEAS_NOISE_Y 0.0
 
+// IMU measurement
+#define IMU_MEAS_SIZE 1  //Measurement: [omg]
+#define IMU_MU_MEAS_NOISE_OMG 0.0
+
 #endif //__EKF_CONST__

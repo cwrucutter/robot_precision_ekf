@@ -84,7 +84,7 @@ public:
   
   bool initMeasGPS(MatrixWrapper::ColumnVector noiseIn);
   
-  bool initMeasIMU(MatrixWrapper::ColumnVector noiseIn);
+  bool initMeasIMU(double gyroNoise);
   
   
   void systemUpdate();
@@ -92,6 +92,8 @@ public:
   void measurementUpdateGPS(double x, double y);
   
   void measurementUpdateOdom(double vR, double vL);
+  
+  void measurementUpdateIMU(double omg);
   
   void setNewTimestep(double timestep);
   
@@ -114,12 +116,12 @@ private:
   BFL::AnalyticMeasurementModelGaussianUncertainty*        gps_meas_model_;
   BFL::LinearAnalyticConditionalGaussian*                  odom_meas_pdf_;
   BFL::LinearAnalyticMeasurementModelGaussianUncertainty*  odom_meas_model_;
-  //BFL::LinearAnalyticConditionalGaussian*                 imu_meas_pdf_;
-  //BFL::LinearAnalyticMeasurementModelGaussianUncertainty* imu_meas_model_;
-  BFL::Gaussian*                                          prior_;
-  BFL::ExtendedKalmanFilter*                              filter_;
-  MatrixWrapper::SymmetricMatrix                          sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
-  MatrixWrapper::ColumnVector                             inputs_;
+  BFL::LinearAnalyticConditionalGaussian*                  imu_meas_pdf_;
+  BFL::LinearAnalyticMeasurementModelGaussianUncertainty*  imu_meas_model_;
+  BFL::Gaussian*                                           prior_;
+  BFL::ExtendedKalmanFilter*                               filter_;
+  MatrixWrapper::SymmetricMatrix                           sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;
+  MatrixWrapper::ColumnVector                              inputs_;
   
   BFL::Pdf<MatrixWrapper::ColumnVector> * posterior_;
 

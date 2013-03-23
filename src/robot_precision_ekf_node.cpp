@@ -89,6 +89,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   nh_private.param("sigma_meas_gps_y",  sigma_meas_gps_x_, 0.05);
   nh_private.param("sigma_meas_odom_alpha",  sigma_meas_odom_alpha_, 0.01);
   nh_private.param("sigma_meas_odom_epsilon",  sigma_meas_odom_eps_, 0.0001);
+  nh_private.param("sigma_meas_imu_omg",  sigma_meas_imu_omg_, 0.05);
   
   // Node parameters
   nh_private.param("debug",   debug_, false);
@@ -147,8 +148,12 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
       ROS_WARN("Tried to initialize GPS measurement but failed");
   }
   
-  // TODO: Use IMU
-  //imu_initialized_ = ekf_filter_->initMeasIMU(); 
+  // Add IMU measurement
+  if (imu_used_){
+    double imuNoise = pow(sigma_meas_imu_omg_,2);
+    if (!ekf_filter_->initMeasIMU(imuNoise))
+      ROS_WARN("Tried to initialize IMU measurement but failed");
+  }
   
   systemUpdate();
   
@@ -198,10 +203,13 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
     debug_pub_ = nh_private.advertise<robot_precision_ekf::EKFDebug>("ekf_debug", 2);
     // open files for debugging
     // TODO: Use files for debugging/ automated testing
-    odom_file_.open("/tmp/odom_file.txt");
-    //imu_file_.open("/tmp/imu_file.txt");
-    gps_file_.open("/tmp/gps_file.txt");
     corr_file_.open("/tmp/corr_file.txt");
+    if (odom_used_)
+      odom_file_.open("/tmp/odom_file.txt");
+    if (imu_used_)
+      imu_file_.open("/tmp/imu_file.txt");
+    if (gps_used_)
+      gps_file_.open("/tmp/gps_file.txt");
     //time_file_.open("/tmp/time_file.txt");
     //extra_file_.open("/tmp/extra_file.txt");
   }
@@ -214,7 +222,7 @@ RobotPrecisionEKFNode::~RobotPrecisionEKFNode(){
   if (debug_){
     // close files for debugging
     odom_file_.close();
-    //imu_file_.close();
+    imu_file_.close();
     gps_file_.close();
     corr_file_.close();
     //time_file_.close();
@@ -250,7 +258,7 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   {
     ekf_debug_.enc_vel = v;
     ekf_debug_.enc_omg = w;
-    odom_file_ << time_new_-time_start_ << "," << v << "," << w << endl;
+    odom_file_ << odom_time_.toSec()-time_start_ << "," << v << "," << w << endl;
   }
 };
 
@@ -259,11 +267,24 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
 void RobotPrecisionEKFNode::imuCallback(const ImuConstPtr& imu)
 {
   //imu_callback_counter_++;
+  imu_stamp_ = imu->header.stamp;
+  imu_time_  = Time::now();
   
+  double imu_omg = imu->angular_velocity.z;
+  
+  ekf_filter_->measurementUpdateIMU(imu_omg);
+  
+  cout << endl << endl;
+  cout << "IMU:" << endl;
+  cout << "omega: " << imu_omg << endl;
+  cout << "IMU Update: " << endl;
+  cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
+       << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
   
   if (debug_)
   {
-    ekf_debug_.imu_omg = imu->angular_velocity.z;
+    ekf_debug_.imu_omg = imu_omg;
+    imu_file_ << imu_time_.toSec()-time_start_ << "," << imu_omg << endl;
   }
 };
 
@@ -338,6 +359,7 @@ void RobotPrecisionEKFNode::systemUpdate()
 // filter loop
 void RobotPrecisionEKFNode::spin(const ros::TimerEvent& e)
 {
+  // Dont do anything right now
   //systemUpdate();
 };
 
