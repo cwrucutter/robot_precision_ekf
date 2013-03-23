@@ -246,6 +246,7 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   
   ekf_filter_->measurementUpdateOdom(vR, vL);
   
+  /*
   cout << endl << endl;
   cout << "Encoders:" << endl;
   cout << "v: " << v << " w: " << w << endl
@@ -253,7 +254,7 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   cout << "Encoder Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
-       
+   */    
   if (debug_)
   {
     ekf_debug_.enc_vel = v;
@@ -274,13 +275,14 @@ void RobotPrecisionEKFNode::imuCallback(const ImuConstPtr& imu)
   
   ekf_filter_->measurementUpdateIMU(imu_omg);
   
+  /*
   cout << endl << endl;
   cout << "IMU:" << endl;
   cout << "omega: " << imu_omg << endl;
   cout << "IMU Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
-  
+  */
   if (debug_)
   {
     ekf_debug_.imu_omg = imu_omg;
@@ -308,11 +310,11 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   ekf_filter_->measurementUpdateGPS(gps->pose.position.x,gps->pose.position.y);
   
   ROS_INFO("\nSpin function at time %f, Elapsed: %f", ros::Time::now().toSec(), time_diff);
-  cout << endl << endl;
+  /*cout << endl << endl;
   cout << "GPS Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
-  
+  */
   if (debug_)
   {
     ekf_debug_.gps_x = gps->pose.position.x;
