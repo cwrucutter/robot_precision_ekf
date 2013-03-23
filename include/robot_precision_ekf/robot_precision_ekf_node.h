@@ -99,6 +99,8 @@ private:
 
   /// callback function for imu data
   void imuCallback(const ImuConstPtr& imu);
+  
+  void setStartTime(double t);
 
   ros::NodeHandle node_;
   ros::Timer timer_;
@@ -141,6 +143,7 @@ private:
   ros::Time odom_time_, imu_time_, gps_time_;
   ros::Time odom_stamp_, imu_stamp_, gps_stamp_, filter_stamp_;
   bool odom_used_, imu_used_, gps_used_;
+  bool time_init_;
   double timeout_;
   bool debug_;
   MatrixWrapper::ColumnVector sys_covariance_, gps_covariance_, odom_covariance_, imu_covariance_;

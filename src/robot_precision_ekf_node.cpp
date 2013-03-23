@@ -199,7 +199,8 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   // publish state service
   time_new_ = ros::Time::now().toSec();
   time_old_ = time_new_;
-  time_start_ = time_new_;
+  time_start_ = 0.0;
+  time_init_ = false;
 
   if (debug_){
     debug_pub_ = nh_private.advertise<robot_precision_ekf::EKFDebug>("ekf_debug", 2);
@@ -230,12 +231,24 @@ RobotPrecisionEKFNode::~RobotPrecisionEKFNode(){
   }
 };
 
+void RobotPrecisionEKFNode::setStartTime(double t)
+{
+  if (time_init_)
+    return;
+  else
+  {
+    time_start_ = t;
+    time_init_ = true;
+  }
+}
+
 
 // callback function for odom data
 void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
 {
   //odom_callback_counter_++;
   odom_stamp_ = odom->header.stamp;
+  setStartTime(odom_stamp_.toSec());
   odom_time_  = Time::now();
   
   double v, w, vR, vL;
@@ -259,7 +272,7 @@ void RobotPrecisionEKFNode::odomCallback(const OdomConstPtr& odom)
   {
     ekf_debug_.enc_vel = v;
     ekf_debug_.enc_omg = w;
-    odom_file_ << odom_time_.toSec()-time_start_ << "," << v << "," << w << endl;
+    odom_file_ << odom_stamp_.toSec()-time_start_ << "," << v << "," << w << endl;
   }
 };
 
@@ -269,6 +282,7 @@ void RobotPrecisionEKFNode::imuCallback(const ImuConstPtr& imu)
 {
   //imu_callback_counter_++;
   imu_stamp_ = imu->header.stamp;
+  setStartTime(imu_stamp_.toSec());
   imu_time_  = Time::now();
   
   double imu_omg = imu->angular_velocity.z;
@@ -286,7 +300,7 @@ void RobotPrecisionEKFNode::imuCallback(const ImuConstPtr& imu)
   if (debug_)
   {
     ekf_debug_.imu_omg = imu_omg;
-    imu_file_ << imu_time_.toSec()-time_start_ << "," << imu_omg << endl;
+    imu_file_ << imu_stamp_.toSec()-time_start_ << "," << imu_omg << endl;
   }
 };
 
@@ -295,6 +309,7 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
 {
   //gps_callback_counter_++;
   gps_stamp_ = gps->header.stamp;
+  setStartTime(gps_stamp_.toSec());
   gps_time_  = Time::now();
   
   // Perform the system update every time the GPS is received!
@@ -430,6 +445,7 @@ void RobotPrecisionEKFNode::publish()
   if (debug_)
   {
     int numstates = ekf_filter_->getNumStates();
+    cout << "Times: " << time_new_ << " " << time_start_ <<endl;
     state_file_ << time_new_-time_start_ << ",";
     cov_file_   << time_new_-time_start_ << ",";
     for (int i=1; i<=(numstates-1); i++) {
