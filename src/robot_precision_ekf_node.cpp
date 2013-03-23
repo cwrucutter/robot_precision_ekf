@@ -85,6 +85,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   nh_private.param("sigma_sys_omg",  sigma_sys_omg_, 0.5);
   nh_private.param("sigma_sys_vR", sigma_sys_vR_, 0.05);
   nh_private.param("sigma_sys_vL", sigma_sys_vL_, 0.05);
+  nh_private.param("sigma_sys_imubias",  sigma_sys_imubias_, 0.001);
   nh_private.param("sigma_meas_gps_x",  sigma_meas_gps_x_, 0.05);
   nh_private.param("sigma_meas_gps_y",  sigma_meas_gps_x_, 0.05);
   nh_private.param("sigma_meas_odom_alpha",  sigma_meas_odom_alpha_, 0.01);
@@ -119,7 +120,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   // INITIALIZE EKF and MEASUREMENTS
   // ********************************
    
-  MatrixWrapper::ColumnVector sysNoise(7);
+  MatrixWrapper::ColumnVector sysNoise(8);
   sysNoise(1) = pow(sigma_sys_x_,2); // variance = sigma^2
   sysNoise(2) = pow(sigma_sys_y_,2);
   sysNoise(3) = pow(sigma_sys_tht_,2);
@@ -127,6 +128,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   sysNoise(5) = pow(sigma_sys_omg_,2);
   sysNoise(6) = pow(sigma_sys_vR_,2);
   sysNoise(7) = pow(sigma_sys_vL_,2);
+  sysNoise(8) = pow(sigma_sys_imubias_,2);
   sys_covariance_ = sysNoise;
   
   // Initialize Filter with desired configuration, dt, and noise
@@ -149,7 +151,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   }
   
   // Add IMU measurement
-  if (imu_used_){
+  if (imu_used_) {
     double imuNoise = pow(sigma_meas_imu_omg_,2);
     if (!ekf_filter_->initMeasIMU(imuNoise))
       ROS_WARN("Tried to initialize IMU measurement but failed");
@@ -425,13 +427,7 @@ void RobotPrecisionEKFNode::publish()
   // Send the debugging output...
   if (debug_)
   {
-    int numstates = 0;
-    if (filter_type_ == RobotPrecisionEKF::EKF_7STATE_VERR)
-      numstates = 7;
-    else if (filter_type_ == RobotPrecisionEKF::EKF_3STATE)
-      numstates = 3;
-    else
-      numstates = 5;
+    int numstates = ekf_filter_->getNumStates();
     state_file_ << time_new_-time_start_ << ",";
     cov_file_   << time_new_-time_start_ << ",";
     for (int i=1; i<=(numstates-1); i++) {

@@ -20,7 +20,7 @@
                               // libraries
 #include "angles/angles.h"
 #define NUMCONDARGUMENTS 1
-#define NUMSTATES 5
+#define NUMSTATES 6
 
 namespace BFL
 {
@@ -62,6 +62,7 @@ namespace BFL
     state(3) = angles::normalize_angle(state(3) + state(5)*dt);
     state(4) = state(4);
     state(5) = state(5);
+    state(6) = state(6);
     
     return state + AdditiveNoiseMuGet();
   }
@@ -93,6 +94,8 @@ namespace BFL
       df(4,4) = 1.0;
       
       df(5,5) = 1.0;
+      
+      df(6,6) = 1.0;
 
       return df;
     }

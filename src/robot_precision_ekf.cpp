@@ -62,11 +62,11 @@ RobotPrecisionEKF::RobotPrecisionEKF(FilterType type, double timestep, ColumnVec
    
   filter_type_ = type;
   if (filter_type_ == EKF_5STATE)
-    state_size_ = 5;
+    state_size_ = 6;
   else if (filter_type_ == RobotPrecisionEKF::EKF_3STATE)
     state_size_ = 3;
   else if (filter_type_ == RobotPrecisionEKF::EKF_7STATE_VERR)
-    state_size_ = 7;
+    state_size_ = 8;
   else
   {
     ROS_WARN("Unknown Filter type. Cannot Initialize EKF");
@@ -126,10 +126,10 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
     
     case RobotPrecisionEKF::EKF_5STATE:
       sys_noise_Mu(1) = MU_SYSTEM_NOISE_X; sys_noise_Mu(2) = MU_SYSTEM_NOISE_Y; sys_noise_Mu(3) = MU_SYSTEM_NOISE_THETA;
-      sys_noise_Mu(4) = MU_SYSTEM_NOISE_VEL; sys_noise_Mu(5) = MU_SYSTEM_NOISE_OMG;
+      sys_noise_Mu(4) = MU_SYSTEM_NOISE_VEL; sys_noise_Mu(5) = MU_SYSTEM_NOISE_OMG; sys_noise_Mu(6) = MU_SYSTEM_NOISE_IMUBIAS;
       
       sys_Q(1,1) = noiseIn(1)*dt_; sys_Q(2,2) = noiseIn(2)*dt_; sys_Q(3,3) = noiseIn(3)*dt_;
-      sys_Q(4,4) = noiseIn(4)*dt_; sys_Q(5,5) = noiseIn(5)*dt_;
+      sys_Q(4,4) = noiseIn(4)*dt_; sys_Q(5,5) = noiseIn(5)*dt_; sys_Q(6,6) = noiseIn(8)*dt_;
       
       // Create Gaussian
       system_Uncertainty.ExpectedValueSet(sys_noise_Mu);
@@ -142,9 +142,9 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       // Continuous Gaussian prior (for Kalman filters)
       prior_Mu(1) = PRIOR_MU_X; // This is just set to something arbitrary because the 
       prior_Mu(2) = PRIOR_MU_Y; // filter shold be able to figure it all out. Or something
-      prior_Mu(3) = PRIOR_MU_THETA; prior_Mu(4) = PRIOR_MU_VEL; prior_Mu(5) = PRIOR_MU_OMG;
+      prior_Mu(3) = PRIOR_MU_THETA; prior_Mu(4) = PRIOR_MU_VEL; prior_Mu(5) = PRIOR_MU_OMG; prior_Mu(6) = PRIOR_MU_IMUBIAS;
       prior_Cov(1,1) = PRIOR_COV_X; prior_Cov(2,2) = PRIOR_COV_Y; prior_Cov(3,3) = PRIOR_COV_THETA;
-      prior_Cov(4,4) = PRIOR_COV_VEL; prior_Cov(5,5) = PRIOR_COV_OMG;
+      prior_Cov(4,4) = PRIOR_COV_VEL; prior_Cov(5,5) = PRIOR_COV_OMG; prior_Cov(6,6) = PRIOR_COV_IMUBIAS;
       prior_  = new Gaussian(prior_Mu,prior_Cov);
       return true;
       
@@ -171,11 +171,11 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
     case RobotPrecisionEKF::EKF_7STATE_VERR:
       sys_noise_Mu(1) = MU_SYSTEM_NOISE_X; sys_noise_Mu(2) = MU_SYSTEM_NOISE_Y; sys_noise_Mu(3) = MU_SYSTEM_NOISE_THETA;
       sys_noise_Mu(4) = MU_SYSTEM_NOISE_VEL; sys_noise_Mu(5) = MU_SYSTEM_NOISE_OMG;
-      sys_noise_Mu(6) = MU_SYSTEM_NOISE_VRERR; sys_noise_Mu(7) = MU_SYSTEM_NOISE_VLERR;
+      sys_noise_Mu(6) = MU_SYSTEM_NOISE_VRERR; sys_noise_Mu(7) = MU_SYSTEM_NOISE_VLERR; sys_noise_Mu(8) = MU_SYSTEM_NOISE_IMUBIAS;
       
       sys_Q(1,1) = noiseIn(1)*dt_; sys_Q(2,2) = noiseIn(2)*dt_; sys_Q(3,3) = noiseIn(3)*dt_;
       sys_Q(4,4) = noiseIn(4)*dt_; sys_Q(5,5) = noiseIn(5)*dt_;
-      sys_Q(6,6) = noiseIn(6)*dt_; sys_Q(7,7) = noiseIn(7)*dt_;
+      sys_Q(6,6) = noiseIn(6)*dt_; sys_Q(7,7) = noiseIn(7)*dt_; sys_Q(8,8) = noiseIn(8)*dt_;
       
       // Create Gaussian
       system_Uncertainty.ExpectedValueSet(sys_noise_Mu);
@@ -189,10 +189,10 @@ bool RobotPrecisionEKF::initSystem(ColumnVector noiseIn)
       prior_Mu(1) = PRIOR_MU_X; // This is just set to something arbitrary because the 
       prior_Mu(2) = PRIOR_MU_Y; // filter shold be able to figure it all out. Or something
       prior_Mu(3) = PRIOR_MU_THETA; prior_Mu(4) = PRIOR_MU_VEL; prior_Mu(5) = PRIOR_MU_OMG;
-      prior_Mu(6) = PRIOR_MU_VRERR; prior_Mu(7) = PRIOR_MU_VLERR;
+      prior_Mu(6) = PRIOR_MU_VRERR; prior_Mu(7) = PRIOR_MU_VLERR; prior_Mu(8) = PRIOR_MU_IMUBIAS;
       prior_Cov(1,1) = PRIOR_COV_X; prior_Cov(2,2) = PRIOR_COV_Y; prior_Cov(3,3) = PRIOR_COV_THETA;
       prior_Cov(4,4) = PRIOR_COV_VEL; prior_Cov(5,5) = PRIOR_COV_OMG;
-      prior_Cov(6,6) = PRIOR_COV_VRERR; prior_Cov(7,7) = PRIOR_COV_VLERR;
+      prior_Cov(6,6) = PRIOR_COV_VRERR; prior_Cov(7,7) = PRIOR_COV_VLERR; prior_Cov(8,8) = PRIOR_COV_IMUBIAS;
       prior_  = new Gaussian(prior_Mu,prior_Cov);
       return true;
       
@@ -347,14 +347,31 @@ bool RobotPrecisionEKF::initMeasIMU(double gyroNoise)
   
   // Measurement depends on the filter type desired
   switch (filter_type_)
-  {
+  {      
     case RobotPrecisionEKF::EKF_5STATE:
+      // IMU MEASUREMENT MODEL (linear)
+      // y = [omg + bias]
+    
+      H_imu(1,5) = 1.0; H_imu(1,6) = 1.0;
+      
+      // Construct the measurement noise
+      meas_noise_Mu_imu(1) = IMU_MU_MEAS_NOISE_OMG;
+      meas_R_imu(1,1) = gyroNoise;
+      
+      measurement_Uncertainty_imu.ExpectedValueSet(meas_noise_Mu_imu);
+      measurement_Uncertainty_imu.CovarianceSet(meas_R_imu);
+
+      // create the measurement model
+      imu_meas_pdf_   = new LinearAnalyticConditionalGaussian(H_imu, measurement_Uncertainty_imu);
+      imu_meas_model_ = new LinearAnalyticMeasurementModelGaussianUncertainty(imu_meas_pdf_);
+      imu_initialized_ = true;
+      return true;
+      
     case RobotPrecisionEKF::EKF_7STATE_VERR:
       // IMU MEASUREMENT MODEL (linear)
-      // y = [omg]
+      // y = [omg + bias]
     
-      //TODO: Replace the hardcoded track width with the track from odometry parameter
-      H_imu(1,5) = 1.0;
+      H_imu(1,5) = 1.0; H_imu(1,8) = 1.0;
       
       // Construct the measurement noise
       meas_noise_Mu_imu(1) = IMU_MU_MEAS_NOISE_OMG;

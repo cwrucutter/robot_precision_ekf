@@ -97,6 +97,8 @@ public:
   
   void setNewTimestep(double timestep);
   
+  double getNumStates() {return state_size_;}
+  
   MatrixWrapper::ColumnVector getMean();
   
   MatrixWrapper::SymmetricMatrix getCovariance();

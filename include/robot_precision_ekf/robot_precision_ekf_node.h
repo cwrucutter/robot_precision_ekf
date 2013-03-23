@@ -121,6 +121,7 @@ private:
   double sigma_sys_omg_;
   double sigma_sys_vR_;
   double sigma_sys_vL_;
+  double sigma_sys_imubias_;
   double sigma_meas_gps_x_;
   double sigma_meas_gps_y_;
   double sigma_meas_odom_alpha_;

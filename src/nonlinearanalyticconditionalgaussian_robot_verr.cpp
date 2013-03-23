@@ -20,7 +20,7 @@
                               // libraries
 #include "angles/angles.h"
 #define NUMCONDARGUMENTS 1
-#define NUMSTATES 7
+#define NUMSTATES 8
 
 namespace BFL
 {
@@ -65,6 +65,7 @@ namespace BFL
     state(5) = state(5);
     state(6) = state(6);
     state(7) = state(7);
+    state(8) = state(8);
     
     return state + AdditiveNoiseMuGet();
   }
@@ -76,7 +77,7 @@ namespace BFL
     
     if (i==0)
     {
-      // Jacobian F = df(x)/dx for a mobile robot, where x = [x;y;tht;vel;omg]
+      // Jacobian F = df(x)/dx for a mobile robot, where x = [x;y;tht;vel;omg;vRerr;vLerr;imubias]
       state = ConditionalArgumentGet(0);
       tht_mid = state(3)+state(5)*dt/2; // Theta mid-pt = Thtold + w*dt/2
       
@@ -100,6 +101,8 @@ namespace BFL
       df(6,6) = 1.0;
       
       df(7,7) = 1.0;
+      
+      df(8,8) = 1.0;
 
       return df;
     }
