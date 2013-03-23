@@ -203,15 +203,14 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
     debug_pub_ = nh_private.advertise<robot_precision_ekf::EKFDebug>("ekf_debug", 2);
     // open files for debugging
     // TODO: Use files for debugging/ automated testing
-    corr_file_.open("/tmp/corr_file.txt");
+    state_file_.open("/tmp/state_file.txt");
+    cov_file_.open("/tmp/cov_file.txt");
     if (odom_used_)
       odom_file_.open("/tmp/odom_file.txt");
     if (imu_used_)
       imu_file_.open("/tmp/imu_file.txt");
     if (gps_used_)
       gps_file_.open("/tmp/gps_file.txt");
-    //time_file_.open("/tmp/time_file.txt");
-    //extra_file_.open("/tmp/extra_file.txt");
   }
 };
 
@@ -221,12 +220,11 @@ RobotPrecisionEKFNode::~RobotPrecisionEKFNode(){
 
   if (debug_){
     // close files for debugging
+    state_file_.close();
+    cov_file_.close();
     odom_file_.close();
     imu_file_.close();
     gps_file_.close();
-    corr_file_.close();
-    //time_file_.close();
-    //extra_file_.close();
   }
 };
 
@@ -434,10 +432,15 @@ void RobotPrecisionEKFNode::publish()
       numstates = 3;
     else
       numstates = 5;
-    corr_file_ << time_new_-time_start_ << ",";
-    for (int i=1; i<=(numstates-1); i++)
-      corr_file_ << mean(i) << ",";
-    corr_file_ << mean(numstates)<<endl;
+    state_file_ << time_new_-time_start_ << ",";
+    cov_file_   << time_new_-time_start_ << ",";
+    for (int i=1; i<=(numstates-1); i++) {
+      state_file_ << mean(i) << ",";
+      cov_file_   << cov(i,i) << ",";
+    }
+    state_file_ << mean(numstates) << endl;
+    cov_file_   << cov(numstates,numstates) << endl;
+    
     // Send state and diagonal error bars
     switch (filter_type_)
     {

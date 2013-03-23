@@ -64,7 +64,7 @@
 //#define SIGMA_SYSTEM_NOISE_OMG pow(0.5,2)
 
 // GPS Measurement
-#define GPS_LEVERARM_X -0.45 // TODO: Pull the leverarm from the base_link->base_gps transform
+#define GPS_LEVERARM_X 0.0 // -0.45 // TODO: Pull the leverarm from the base_link->base_gps transform
 #define GPS_LEVERARM_Y 0.0
 #define GPS_MEAS_SIZE 2  //Measurement: [x; y]
 //#define GPS_SIGMA_MEAS_NOISE_X pow(0.05,2)

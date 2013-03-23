@@ -9,7 +9,7 @@
     <!-- General parameters -->
     <param name="filter_type" value="ekf_7state_verr"/>
     <param name="odom_used" value="true" />
-    <param name="imu_used" value="true" />
+    <param name="imu_used" value="false" />
     <param name="gps_used" value="true" />
     <param name="freq" value="10.0" />
     <param name="transform_tolerance" value="0.15" />
@@ -26,7 +26,7 @@
     <param name="sigma_meas_gps_x" value="0.02"/>
     <param name="sigma_meas_gps_y" value="0.02"/>
     <param name="sigma_meas_odom_alpha" value="0.000"/>
-    <param name="sigma_meas_odom_epsilon" value="0.003"/>
+    <param name="sigma_meas_odom_epsilon" value="0.0025"/>
     <param name="sigma_meas_imu_omg" value="0.05"/>
 
     <!-- Other -->

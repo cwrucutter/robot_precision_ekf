@@ -146,7 +146,7 @@ private:
   double time_old_, time_new_, time_start_;
   
   // debugging Stuff
-  std::ofstream odom_file_, imu_file_, gps_file_, corr_file_, time_file_, extra_file_;
+  std::ofstream odom_file_, imu_file_, gps_file_, state_file_, cov_file_;
   robot_precision_ekf::EKFDebug ekf_debug_;
   ros::Publisher debug_pub_;
 
