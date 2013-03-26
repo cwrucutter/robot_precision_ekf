@@ -265,7 +265,7 @@ bool RobotPrecisionEKF::initMeasOdom(double alpha, double epsilon)
     
       //TODO: Replace the hardcoded track width with the track from odometry parameter
       H_odom(1,4) = 1.0; H_odom(1,5) =  ODOM_TRACK/2; H_odom(1,6) = 1.0;
-      H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2; H_odom(1,7) = 1.0;
+      H_odom(2,4) = 1.0; H_odom(2,5) = -ODOM_TRACK/2; H_odom(2,7) = 1.0;
       
       // Construct the measurement noise
       meas_noise_Mu_odom(1) = ODOM_MU_MEAS_NOISE_X;
