@@ -87,7 +87,7 @@ RobotPrecisionEKFNode::RobotPrecisionEKFNode()
   nh_private.param("sigma_sys_vL", sigma_sys_vL_, 0.05);
   nh_private.param("sigma_sys_imubias",  sigma_sys_imubias_, 0.001);
   nh_private.param("sigma_meas_gps_x",  sigma_meas_gps_x_, 0.05);
-  nh_private.param("sigma_meas_gps_y",  sigma_meas_gps_x_, 0.05);
+  nh_private.param("sigma_meas_gps_y",  sigma_meas_gps_y_, 0.05);
   nh_private.param("sigma_meas_odom_alpha",  sigma_meas_odom_alpha_, 0.01);
   nh_private.param("sigma_meas_odom_epsilon",  sigma_meas_odom_eps_, 0.0001);
   nh_private.param("sigma_meas_imu_omg",  sigma_meas_imu_omg_, 0.05);
@@ -311,6 +311,7 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   gps_stamp_ = gps->header.stamp;
   setStartTime(gps_stamp_.toSec());
   gps_time_  = Time::now();
+  cout << endl << "Gps Received: X: " << gps->pose.position.x << "," << gps->pose.position.y << endl;
   
   // Perform the system update every time the GPS is received!
   // It should be received every 10 hz, and may be more reliable than the 
@@ -325,11 +326,11 @@ void RobotPrecisionEKFNode::gpsCallback(const GpsConstPtr& gps)
   ekf_filter_->measurementUpdateGPS(gps->pose.position.x,gps->pose.position.y);
   
   ROS_INFO("\nSpin function at time %f, Elapsed: %f", ros::Time::now().toSec(), time_diff);
-  /*cout << endl << endl;
+  cout << endl << endl;
   cout << "GPS Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
-  */
+  
   if (debug_)
   {
     ekf_debug_.gps_x = gps->pose.position.x;
@@ -365,7 +366,7 @@ void RobotPrecisionEKFNode::systemUpdate()
   
   ekf_filter_->systemUpdate();
   
-  cout << endl << endl;
+  cout << endl;
   cout << "System Update: " << endl;
   cout << " Posterior Mean = " << endl << ekf_filter_->getMean() << endl
        << " Covariance = " << endl << ekf_filter_->getCovariance() << "" << endl;
@@ -421,25 +422,24 @@ void RobotPrecisionEKFNode::publish()
     this->tf_->waitForTransform(odom_frame_id_, base_frame_id_, gps_stamp_, ros::Duration(0.1));
     this->tf_->transformPose(odom_frame_id_,
                              tmp_tf_stamped,
-                             odom_to_map);
+                             odom_to_map);                         
+    
+    latest_tf_ = tf::Transform(tf::Quaternion(odom_to_map.getRotation()),
+                               tf::Point(odom_to_map.getOrigin()));
+
+    // We want to send a transform that is good up until a
+    // tolerance time so that odom can be used
+    ros::Time transform_expiration = (gps_stamp_ +
+                                      transform_tolerance_);
+    tf::StampedTransform tmp_tf_new(latest_tf_.inverse(),
+                                    transform_expiration,
+                                    global_frame_id_, odom_frame_id_);
+    this->tfb_->sendTransform(tmp_tf_new);
   }
   catch(tf::TransformException e)
   {
-    ROS_WARN("Failed to subtract base to odom transform (%s)", e.what());
-    return;
+    ROS_WARN("Failed to subtract base to odom transform (%s). Skipping transform", e.what());
   }
-
-  latest_tf_ = tf::Transform(tf::Quaternion(odom_to_map.getRotation()),
-                             tf::Point(odom_to_map.getOrigin()));
-
-  // We want to send a transform that is good up until a
-  // tolerance time so that odom can be used
-  ros::Time transform_expiration = (gps_stamp_ +
-                                    transform_tolerance_);
-  tf::StampedTransform tmp_tf_stamped(latest_tf_.inverse(),
-                                      transform_expiration,
-                                      global_frame_id_, odom_frame_id_);
-  this->tfb_->sendTransform(tmp_tf_stamped);
   
   // Send the debugging output...
   if (debug_)
@@ -448,9 +448,12 @@ void RobotPrecisionEKFNode::publish()
     cout << "Times: " << time_new_ << " " << time_start_ <<endl;
     state_file_ << time_new_-time_start_ << ",";
     cov_file_   << time_new_-time_start_ << ",";
+    cout        << time_new_-time_start_ << ",";
     for (int i=1; i<=(numstates-1); i++) {
+      cout        << mean(i) << ",";
+      cout        << 3*sqrt(cov(i,i)) << ",";
       state_file_ << mean(i) << ",";
-      cov_file_   << cov(i,i) << ",";
+      cov_file_   << 3*sqrt(cov(i,i)) << ",";
     }
     state_file_ << mean(numstates) << endl;
     cov_file_   << cov(numstates,numstates) << endl;
